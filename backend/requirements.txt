@@ -1,0 +1,16 @@
+annotated-types==0.7.0
+anyio==4.13.0
+click==8.3.2
+fastapi==0.115.3
+h11==0.16.0
+idna==3.11
+openpyxl==3.1.5
+pydantic==2.12.5
+pydantic_core==2.33.2
+pymysql==1.1.1
+SQLAlchemy==2.0.41
+sqlmodel==0.0.22
+starlette==0.41.3
+typing_extensions==4.13.2
+uvicorn==0.34.3
+python-multipart==0.0.20
