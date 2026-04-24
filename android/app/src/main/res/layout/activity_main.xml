@@ -5,7 +5,6 @@
     android:orientation="vertical"
     android:background="#1a1a2e">
 
-    <!-- Botón Conectar Bluetooth (azul grande) -->
     <Button
         android:id="@+id/btnConectar"
         android:layout_width="match_parent"
@@ -18,7 +17,6 @@
         android:backgroundTint="#0000FF"
         android:layout_margin="4dp" />
 
-    <!-- Fila 1: Adelante / Reversa -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -49,7 +47,6 @@
             android:layout_margin="4dp" />
     </LinearLayout>
 
-    <!-- Fila 2: Izquierda / Derecha -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -79,7 +76,6 @@
             android:layout_margin="4dp" />
     </LinearLayout>
 
-    <!-- Fila 3: Frenar / Disparo -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -111,7 +107,15 @@
             android:layout_margin="4dp" />
     </LinearLayout>
 
-    <!-- Barra de estado en la parte inferior -->
-
+    <TextView
+        android:id="@+id/tvEstado"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="(°w°)"
+        android:textColor="#AAAAAA"
+        android:textSize="11sp"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="#111111" />
 
 </LinearLayout>
