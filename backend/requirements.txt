@@ -5,12 +5,11 @@ fastapi==0.115.3
 h11==0.16.0
 idna==3.11
 openpyxl==3.1.5
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.6
 pydantic==2.12.5
-pydantic_core==2.33.2
 SQLAlchemy==2.0.41
 sqlmodel==0.0.22
 starlette==0.41.3
-typing_extensions==4.13.2
+typing_extensions==4.14.1
 uvicorn==0.34.3
 python-multipart==0.0.20
