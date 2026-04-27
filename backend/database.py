@@ -12,8 +12,7 @@ from sqlmodel import SQLModel, create_engine, Session
 #
 # Si DATABASE_URL no está definida, usa SQLite automáticamente.
 # ─────────────────────────────────────────────────────────────────────────────
-
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dron.db")
+DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://")
 
 # SQLite necesita este argumento extra; MySQL no lo usa
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
