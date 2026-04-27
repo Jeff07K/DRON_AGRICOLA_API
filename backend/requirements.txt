@@ -5,9 +5,9 @@ fastapi==0.115.3
 h11==0.16.0
 idna==3.11
 openpyxl==3.1.5
+psycopg2-binary==2.9.9
 pydantic==2.12.5
 pydantic_core==2.33.2
-pymysql==1.1.1
 SQLAlchemy==2.0.41
 sqlmodel==0.0.22
 starlette==0.41.3
