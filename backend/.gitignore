@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+.venv
+*.log
+*.hprof
+*.orig
+*.rej
+*.swo
+*.swp       
