@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_ENABLE_BT = 1
         private const val REQUEST_PERMISOS  = 2
-        private const val SERVER_URL = "https://TU-APP.onrender.com"
+        private const val SERVER_URL = "https://dron-agricola-api-3.onrender.com/"
     }
 
     private var btAdapter: BluetoothAdapter? = null
