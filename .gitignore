@@ -33,4 +33,5 @@ build
 *.pot
 *.pyc
 *.pyo
-*.pyd              
+*.pyd  
+.sql              
