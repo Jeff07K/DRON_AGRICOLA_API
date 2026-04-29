@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Iniciar servidor",
+      "type": "shell",
+      "command": "source venv/Scripts/activate && export $(cat .env | xargs) && uvicorn main:app --reload --port 8000",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "new" }
+    }
+  ]
+}
