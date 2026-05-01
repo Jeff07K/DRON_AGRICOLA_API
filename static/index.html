@@ -4,389 +4,312 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dron Agrícola — Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:        #0b0f14;
-    --surface:   #111820;
-    --border:    #1e2d3d;
-    --accent:    #00d4aa;
-    --accent2:   #ff6b35;
-    --accent3:   #4fa3ff;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --danger:    #ef4444;
-    --success:   #22c55e;
-    --mono:      'Space Mono', monospace;
-    --sans:      'Inter', sans-serif;
+    --bg:      #0b0f14;
+    --surface: #111820;
+    --border:  #1e2d3d;
+    --accent:  #00d4aa;
+    --amber:   #f59e0b;
+    --blue:    #3b82f6;
+    --red:     #ef4444;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --success: #22c55e;
+    --mono:    'Space Mono', monospace;
+    --sans:    'Inter', sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
 
   /* ── Header ── */
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 16px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
   }
-  .logo {
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--accent);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-  }
+  .logo { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 2px; }
   .logo span { color: var(--muted); }
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--success);
-    display: inline-block;
-    margin-right: 8px;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-  .header-right {
-    display: flex; align-items: center; gap: 16px;
-    font-size: 12px; color: var(--muted); font-family: var(--mono);
-  }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--success);
+         display:inline-block; margin-right:6px; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .header-right { font-family:var(--mono); font-size:11px; color:var(--muted);
+                  display:flex; align-items:center; gap:16px; }
 
-  /* ── Layout ── */
-  main { max-width: 1280px; margin: 0 auto; padding: 32px; }
-  h2 {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-  }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
 
-  /* ── KPI Cards ── */
-  .kpi-grid {
+  /* ── KPIs ── */
+  .kpi-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
-    margin-bottom: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px; margin-bottom: 20px;
   }
   .kpi {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px 16px;
-    position: relative;
-    overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 12px; position: relative; overflow: hidden;
   }
-  .kpi::before {
-    content: '';
-    position: absolute; top: 0; left: 0;
-    width: 3px; height: 100%;
-    background: var(--accent);
+  .kpi::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--accent); }
+  .kpi:nth-child(2)::before { background:var(--amber); }
+  .kpi:nth-child(3)::before { background:var(--blue); }
+  .kpi:nth-child(4)::before { background:#a78bfa; }
+  .kpi-label { font-size:9px; color:var(--muted); text-transform:uppercase;
+               letter-spacing:1.5px; margin-bottom:6px; font-family:var(--mono); }
+  .kpi-value { font-size:24px; font-weight:600; font-family:var(--mono); }
+
+  /* ── Botones de descarga ── */
+  .download-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-bottom: 20px;
   }
-  .kpi:nth-child(2)::before { background: var(--accent2); }
-  .kpi:nth-child(3)::before { background: var(--accent3); }
-  .kpi:nth-child(4)::before { background: #a78bfa; }
-  .kpi:nth-child(5)::before { background: #fbbf24; }
-  .kpi:nth-child(6)::before { background: var(--success); }
-  .kpi-label {
-    font-size: 10px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 1.5px;
-    margin-bottom: 8px; font-family: var(--mono);
+  @media (max-width: 540px) { .download-row { grid-template-columns: 1fr; } }
+
+  .dl-card {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px;
   }
-  .kpi-value {
-    font-size: 28px; font-weight: 600;
-    font-family: var(--mono); color: var(--text);
-    line-height: 1;
+  .dl-info h3 { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .dl-info p  { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .btn-dl {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px;
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: opacity .2s; white-space: nowrap; flex-shrink: 0;
   }
-  .kpi-unit {
-    font-size: 11px; color: var(--muted); margin-top: 4px;
+  .btn-dl:hover { opacity: .85; }
+  .btn-dl svg { width:16px; height:16px; flex-shrink:0; }
+  .btn-excel { background: var(--accent); color: #0b0f14; }
+  .btn-apk   { background: var(--amber);  color: #0b0f14; }
+  .btn-apk-disabled {
+    background: var(--border); color: var(--muted); cursor: not-allowed;
+    font-size: 11px;
   }
 
   /* ── Tabla ── */
   .table-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 32px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
   }
-  .table-header {
+  .table-head {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
   }
-  .table-title {
-    font-family: var(--mono); font-size: 12px;
-    color: var(--accent); letter-spacing: 2px;
-  }
-  .btn {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: var(--mono);
-    cursor: pointer;
-    border: 1px solid;
-    transition: all .2s;
-    text-decoration: none;
-  }
-  .btn-accent {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #0b0f14; font-weight: 700;
-  }
-  .btn-accent:hover { opacity: .85; }
-  .btn-outline {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--muted);
-  }
-  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-danger {
-    background: transparent;
-    border-color: var(--danger);
-    color: var(--danger);
-  }
-  .btn-danger:hover { background: var(--danger); color: white; }
+  .table-title { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:2px; }
+  .countdown   { font-family:var(--mono); font-size:11px; color:var(--muted);
+                 display:flex; align-items:center; gap:6px; }
+  .cnt-bar  { width:50px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .cnt-fill { height:100%; background:var(--accent); transition:width 1s linear; }
 
-  table { width: 100%; border-collapse: collapse; }
+  table { width:100%; border-collapse:collapse; }
   thead th {
-    background: #0d1620;
-    padding: 10px 16px;
-    font-family: var(--mono); font-size: 10px;
-    color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
-    text-align: left; border-bottom: 1px solid var(--border);
+    background:#0d1620; padding:8px 12px;
+    font-family:var(--mono); font-size:9px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:1px;
+    text-align:center; border-bottom:1px solid var(--border);
   }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
-  tbody tr:hover { background: rgba(0,212,170,.04); }
-  tbody td {
-    padding: 10px 16px; font-size: 13px;
-    font-family: var(--mono); color: var(--text);
-  }
-  .badge {
-    display: inline-block; padding: 2px 8px;
-    border-radius: 4px; font-size: 11px; font-family: var(--mono);
-    background: rgba(0,212,170,.1); color: var(--accent);
-    border: 1px solid rgba(0,212,170,.2);
-  }
-  .empty-state {
-    text-align: center; padding: 48px;
-    color: var(--muted); font-family: var(--mono); font-size: 12px;
-  }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:hover { background:rgba(0,212,170,.04); }
+  tbody td { padding:8px 12px; font-size:12px; font-family:var(--mono); text-align:center; }
+  .badge { display:inline-block; padding:1px 7px; border-radius:4px; font-size:10px;
+           background:rgba(0,212,170,.1); color:var(--accent);
+           border:1px solid rgba(0,212,170,.2); }
+  .empty { text-align:center; padding:48px; color:var(--muted);
+           font-family:var(--mono); font-size:12px; }
 
   /* ── Toast ── */
-  .toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px 20px;
-    font-family: var(--mono); font-size: 12px;
-    display: none; z-index: 999;
+  #toast {
+    position:fixed; bottom:20px; right:20px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:10px 18px;
+    font-family:var(--mono); font-size:12px;
+    display:none; z-index:999; max-width:320px;
   }
-  .toast.success { border-color: var(--success); color: var(--success); }
-  .toast.error   { border-color: var(--danger);  color: var(--danger);  }
-
-  /* ── Spinner ── */
-  .spinner {
-    width: 20px; height: 20px; border: 2px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin .7s linear infinite; display: inline-block;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Stat grid ── */
-  .stat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 12px; margin-bottom: 32px;
-  }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 16px;
-  }
-  .stat-title {
-    font-family: var(--mono); font-size: 11px;
-    color: var(--accent); letter-spacing: 1px; margin-bottom: 12px;
-  }
-  .stat-row {
-    display: flex; justify-content: space-between;
-    padding: 5px 0; border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .stat-row:last-child { border-bottom: none; }
-  .stat-key { color: var(--muted); font-family: var(--mono); }
-  .stat-val { color: var(--text); font-family: var(--mono); font-weight: 700; }
+  #toast.ok  { border-color:var(--success); color:var(--success); }
+  #toast.err { border-color:var(--red);     color:var(--red); }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">DRON<span>/</span>AGRÍCOLA <span>· DASHBOARD</span></div>
+  <div class="logo">DRON<span>/</span>AGRÍCOLA <span>· MPU6050</span></div>
   <div class="header-right">
-    <span><span class="status-dot"></span>API ONLINE</span>
+    <span><span class="dot"></span>EN LÍNEA</span>
     <span id="last-update">—</span>
   </div>
 </header>
 
 <main>
-  <!-- KPI Row -->
-  <h2>Resumen</h2>
-  <div class="kpi-grid" id="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Total registros</div><div class="kpi-value" id="kpi-total">—</div></div>
-    <div class="kpi"><div class="kpi-label">Media Accel X</div><div class="kpi-value" id="kpi-ax">—</div><div class="kpi-unit">m/s²</div></div>
-    <div class="kpi"><div class="kpi-label">Media Accel Y</div><div class="kpi-value" id="kpi-ay">—</div><div class="kpi-unit">m/s²</div></div>
-    <div class="kpi"><div class="kpi-label">Media Accel Z</div><div class="kpi-value" id="kpi-az">—</div><div class="kpi-unit">m/s²</div></div>
-    <div class="kpi"><div class="kpi-label">Media Gyro X</div><div class="kpi-value" id="kpi-gx">—</div><div class="kpi-unit">rad/s</div></div>
-    <div class="kpi"><div class="kpi-label">Disparos</div><div class="kpi-value" id="kpi-disparos">—</div></div>
+
+  <!-- KPIs -->
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-label">Total disparos</div>
+      <div class="kpi-value" id="kpi-n">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Último Accel Z</div>
+      <div class="kpi-value" id="kpi-az">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Último Gyro Z</div>
+      <div class="kpi-value" id="kpi-gz">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Disparo #</div>
+      <div class="kpi-value" id="kpi-d">—</div>
+    </div>
   </div>
 
-  <!-- Estadísticas -->
-  <h2>Estadística descriptiva</h2>
-  <div class="stat-grid" id="stat-grid">
-    <div class="empty-state">Cargando estadísticas...</div>
+  <!-- Botones de descarga -->
+  <div class="download-row">
+
+    <!-- Excel -->
+    <div class="dl-card">
+      <div class="dl-info">
+        <h3>📊 Exportar datos Excel</h3>
+        <p>Datos + estadísticas (media, varianza, regresión)</p>
+      </div>
+      <a class="btn-dl btn-excel" href="/api/export-excel" download="dron_agricola.xlsx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        DESCARGAR EXCEL
+      </a>
+    </div>
+
+    <!-- APK -->
+    <div class="dl-card">
+      <div class="dl-info">
+        <h3>📱 App Android (APK)</h3>
+        <p>Control del dron por Bluetooth</p>
+      </div>
+      <a class="btn-dl btn-apk" href="/static/DronAgricola.apk" download="DronAgricola.apk" id="btn-apk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        DESCARGAR APK
+      </a>
+    </div>
+
   </div>
 
-  <!-- Tabla de datos -->
+  <!-- Tabla -->
   <div class="table-wrap">
-    <div class="table-header">
-      <div class="table-title">// REGISTROS DEL SENSOR MPU6050</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-outline" onclick="loadData()">↺ Actualizar</button>
-        <a class="btn btn-accent" href="/api/export-excel" download>⬇ Exportar Excel</a>
-        <button class="btn btn-danger" onclick="confirmDeleteAll()">✕ Limpiar BD</button>
+    <div class="table-head">
+      <div class="table-title">// REGISTROS MPU6050 — DISPAROS</div>
+      <div class="countdown">
+        Actualiza en <span id="cnt-num">5</span>s
+        <div class="cnt-bar"><div class="cnt-fill" id="cnt-fill" style="width:100%"></div></div>
       </div>
     </div>
     <div id="table-container">
-      <div class="empty-state"><span class="spinner"></span></div>
+      <div class="empty">Cargando datos...</div>
     </div>
   </div>
+
 </main>
 
-<div class="toast" id="toast"></div>
+<div id="toast"></div>
 
 <script>
-const API = window.location.origin;
+const API      = window.location.origin;
+const INTERVAL = 5000;
+let   timer    = 5;
+let   interval;
 
 async function loadData() {
   try {
-    const res = await fetch(`${API}/api/sensor-data`);
+    const res  = await fetch(`${API}/api/sensor-data`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderTable(data);
     renderKPIs(data);
-    renderStats(data);
     document.getElementById('last-update').textContent =
-      'Actualizado: ' + new Date().toLocaleTimeString();
+      'Act: ' + new Date().toLocaleTimeString();
   } catch(e) {
-    showToast('Error al cargar datos: ' + e.message, 'error');
+    document.getElementById('table-container').innerHTML =
+      `<div class="empty">⚠ No se pudo conectar: ${e.message}</div>`;
   }
+}
+
+function renderKPIs(data) {
+  document.getElementById('kpi-n').textContent = data.length;
+  if (!data.length) return;
+  const last = data[data.length - 1];
+  document.getElementById('kpi-az').textContent = (last.accel_z||0).toFixed(3);
+  document.getElementById('kpi-gz').textContent = (last.gyro_z||0).toFixed(4);
+  document.getElementById('kpi-d').textContent  = last.disparo;
 }
 
 function renderTable(data) {
   const container = document.getElementById('table-container');
   if (!data.length) {
-    container.innerHTML = '<div class="empty-state">Sin registros aún. Conecta la ESP32 y activa la app.</div>';
+    container.innerHTML =
+      '<div class="empty">Sin registros — presiona DISPARO en la app para comenzar</div>';
     return;
   }
-  const rows = data.map(r => `
+  const rows = [...data].reverse().map(r => `
     <tr>
       <td><span class="badge">#${r.id}</span></td>
-      <td>${r.timestamp?.replace('T',' ').substring(0,19) || '—'}</td>
       <td>${r.disparo}</td>
-      <td>${r.accel_x.toFixed(4)}</td>
-      <td>${r.accel_y.toFixed(4)}</td>
-      <td>${r.accel_z.toFixed(4)}</td>
-      <td>${r.gyro_x.toFixed(4)}</td>
-      <td>${r.gyro_y.toFixed(4)}</td>
-      <td>${r.gyro_z.toFixed(4)}</td>
-      <td><button class="btn btn-danger" style="padding:4px 10px" onclick="deleteRecord(${r.id})">✕</button></td>
+      <td>${(r.accel_x||0).toFixed(4)}</td>
+      <td>${(r.accel_y||0).toFixed(4)}</td>
+      <td>${(r.accel_z||0).toFixed(4)}</td>
+      <td>${(r.gyro_x||0).toFixed(4)}</td>
+      <td>${(r.gyro_y||0).toFixed(4)}</td>
+      <td>${(r.gyro_z||0).toFixed(4)}</td>
+      <td style="color:var(--muted);font-size:10px">
+        ${(r.timestamp||'').replace('T',' ').substring(0,19)}
+      </td>
     </tr>`).join('');
+
   container.innerHTML = `
     <table>
       <thead><tr>
-        <th>ID</th><th>Timestamp</th><th>Disparo</th>
+        <th>ID</th><th>Disparo #</th>
         <th>Accel X</th><th>Accel Y</th><th>Accel Z</th>
-        <th>Gyro X</th><th>Gyro Y</th><th>Gyro Z</th><th></th>
+        <th>Gyro X</th><th>Gyro Y</th><th>Gyro Z</th>
+        <th>Timestamp</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
 
-function renderKPIs(data) {
-  const n = data.length;
-  if (!n) return;
-  const avg = key => (data.reduce((s,r) => s + r[key], 0) / n).toFixed(3);
-  const disparos = new Set(data.map(r => r.disparo)).size;
-  document.getElementById('kpi-total').textContent = n;
-  document.getElementById('kpi-ax').textContent = avg('accel_x');
-  document.getElementById('kpi-ay').textContent = avg('accel_y');
-  document.getElementById('kpi-az').textContent = avg('accel_z');
-  document.getElementById('kpi-gx').textContent = avg('gyro_x');
-  document.getElementById('kpi-disparos').textContent = disparos;
+function startCountdown() {
+  timer = INTERVAL / 1000;
+  clearInterval(interval);
+  interval = setInterval(() => {
+    timer--;
+    document.getElementById('cnt-num').textContent  = timer;
+    document.getElementById('cnt-fill').style.width = (timer / (INTERVAL/1000) * 100) + '%';
+    if (timer <= 0) { loadData(); timer = INTERVAL / 1000; }
+  }, 1000);
 }
 
-function renderStats(data) {
-  if (!data.length) return;
-  const vars = ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'];
-  const labels = {'accel_x':'Accel X','accel_y':'Accel Y','accel_z':'Accel Z',
-                   'gyro_x':'Gyro X','gyro_y':'Gyro Y','gyro_z':'Gyro Z'};
-  const cards = vars.map(v => {
-    const vals = data.map(r => r[v]);
-    const n = vals.length;
-    const media = vals.reduce((a,b) => a+b,0)/n;
-    const varianza = vals.reduce((s,x) => s+(x-media)**2, 0)/n;
-    const desv = Math.sqrt(varianza);
-    return `
-      <div class="stat-card">
-        <div class="stat-title">// ${labels[v]}</div>
-        <div class="stat-row"><span class="stat-key">Media</span><span class="stat-val">${media.toFixed(4)}</span></div>
-        <div class="stat-row"><span class="stat-key">Varianza</span><span class="stat-val">${varianza.toFixed(6)}</span></div>
-        <div class="stat-row"><span class="stat-key">Desv. Est.</span><span class="stat-val">${desv.toFixed(4)}</span></div>
-        <div class="stat-row"><span class="stat-key">Mínimo</span><span class="stat-val">${Math.min(...vals).toFixed(4)}</span></div>
-        <div class="stat-row"><span class="stat-key">Máximo</span><span class="stat-val">${Math.max(...vals).toFixed(4)}</span></div>
-      </div>`;
-  }).join('');
-  document.getElementById('stat-grid').innerHTML = cards;
-}
+// Verificar si el APK existe
+fetch('/static/DronAgricola.apk', { method: 'HEAD' })
+  .then(r => {
+    if (!r.ok) {
+      const btn = document.getElementById('btn-apk');
+      btn.className = 'btn-dl btn-apk-disabled';
+      btn.removeAttribute('href');
+      btn.removeAttribute('download');
+      btn.innerHTML = 'APK no disponible aún';
+    }
+  }).catch(() => {});
 
-async function deleteRecord(id) {
-  if (!confirm(`¿Eliminar registro #${id}?`)) return;
-  await fetch(`${API}/api/sensor-data/${id}`, {method:'DELETE'});
-  showToast(`Registro #${id} eliminado`, 'success');
-  loadData();
-}
-
-async function confirmDeleteAll() {
-  if (!confirm('⚠️ ¿Eliminar TODOS los registros? Esta acción no se puede deshacer.')) return;
-  const res = await fetch(`${API}/api/sensor-data`, {method:'DELETE'});
-  const msg = await res.json();
-  showToast(msg.message, 'success');
-  loadData();
-}
-
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type}`;
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 3000);
-}
-
-// Cargar al iniciar y refrescar cada 15 segundos
 loadData();
-setInterval(loadData, 15000);
+startCountdown();
 </script>
 </body>
 </html>
