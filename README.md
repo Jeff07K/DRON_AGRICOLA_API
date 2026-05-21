@@ -420,7 +420,7 @@ URL base: `https://dron-agricola-api-3.onrender.com`
 ## Autor
 
 **Jeffrey Alejandro Bejarano Parada** — 67001609  
-Universidad Católica de Colombia · Departamento de Ciencias Básicas · 2025-1  
+Universidad Católica de Colombia · Departamento de Ciencias Básicas · 2026-1  
 Actividad Aplicada — Diseño de sistema robótico inspirado en Da Vinci para la reforestación
 
 🌐 **Dashboard en vivo:** https://dron-agricola-api-3.onrender.com  
