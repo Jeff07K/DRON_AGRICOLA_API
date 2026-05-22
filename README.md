@@ -164,46 +164,6 @@ El ESP32 se llamará `ESP32_Control` por Bluetooth. Emparéjalo desde los Ajuste
 - Celular Android 5.0+ con Bluetooth
 - Cable USB para instalar la app (depuración USB activada)
 
-### Pasos en Android Studio
-
-Sigue este orden exacto:
-
-**1. `AndroidManifest.xml`**  
-Ruta: `app/manifests/AndroidManifest.xml` → Reemplaza todo el contenido con el archivo `android/AndroidManifest.xml`
-
-**2. Crear `BluetoothService.kt` (archivo nuevo)**
-- Clic derecho sobre `com.dronagricola` (la carpeta verde, NO androidTest)
-- `New → Kotlin Class/File → BluetoothService`
-- Reemplaza el contenido con `android/BluetoothService.kt`
-
-**3. `MainActivity.kt`**  
-Ruta: `app/kotlin+java/com.dronagricola/MainActivity` → Reemplaza TODO el contenido
-
-**4. `activity_main.xml`**  
-Ruta: `app/res/layout/activity_main.xml` → Cambia a vista `Code` (esquina superior derecha) y reemplaza todo
-
-**5. `build.gradle.kts (Module :app)`**  
-Ruta: panel inferior `Gradle Scripts → build.gradle.kts (Module :app)` → Reemplaza el bloque `dependencies { }` con:
-
-```kotlin
-dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.espresso:espresso-core:3.5.1")
-}
-```
-
-→ Haz clic en **Sync Now** cuando aparezca el banner amarillo
-
-**6. Instalar en el celular**
-- Conecta el celular por USB
-- Presiona ▶ (Run) en Android Studio
-
----
 
 ## Configuración del backend (FastAPI)
 
