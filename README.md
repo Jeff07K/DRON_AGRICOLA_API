@@ -385,6 +385,7 @@ Actividad Aplicada — Diseño de sistema robótico inspirado en Da Vinci para l
 
 🌐 **Dashboard en vivo:** https://dron-agricola-api-3.onrender.com  
 📦 **Repositorio:** https://github.com/Jeff07K/DRON_AGRICOLA_API
+💲 **Financiamiento** https://cults3d.com/es/modelo-3d/juegos/adaptador-tamiya-70100
 <div align="center">
   <img src="https://api.qrcode-monkey.com/tmp/4352bc075c528d3858106577c2a51c97.svg?1779418683237"/>
 </div>
