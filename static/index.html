@@ -1,316 +1,392 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dron Agrícola</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="shortcut icon" href="https://digimon.net/profile/images/profile/kodai/img_kodai_10.png" />
-<style>
-  :root {
-    --bg:      #0b0f14;
-    --surface: #111820;
-    --border:  #1e2d3d;
-    --accent:  #00d4aa;
-    --amber:   #f59e0b;
-    --blue:    #3b82f6;
-    --red:     #ef4444;
-    --text:    #e2e8f0;
-    --muted:   #64748b;
-    --success: #22c55e;
-    --mono:    'Space Mono', monospace;
-    --sans:    'Inter', sans-serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
-
-  /* ── Header ── */
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-  }
-  .logo { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 2px; }
-  .logo span { color: var(--muted); }
-  .dot { width:8px; height:8px; border-radius:50%; background:var(--success);
-         display:inline-block; margin-right:6px; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .header-right { font-family:var(--mono); font-size:11px; color:var(--muted);
-                  display:flex; align-items:center; gap:16px; }
-
-  main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
-
-  /* ── KPIs ── */
-  .kpi-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px; margin-bottom: 20px;
-  }
-  .kpi {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px 12px; position: relative; overflow: hidden;
-  }
-  .kpi::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--accent); }
-  .kpi:nth-child(2)::before { background:var(--amber); }
-  .kpi:nth-child(3)::before { background:var(--blue); }
-  .kpi:nth-child(4)::before { background:#a78bfa; }
-  .kpi-label { font-size:9px; color:var(--muted); text-transform:uppercase;
-               letter-spacing:1.5px; margin-bottom:6px; font-family:var(--mono); }
-  .kpi-value { font-size:24px; font-weight:600; font-family:var(--mono); }
-
-  /* ── Botones de descarga ── */
-  .download-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px; margin-bottom: 20px;
-  }
-  @media (max-width: 540px) { .download-row { grid-template-columns: 1fr; } }
-
-  .dl-card {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 20px;
-  }
-  .dl-info h3 { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
-  .dl-info p  { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-
-  .btn-dl {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 20px; border-radius: 8px;
-    font-family: var(--mono); font-size: 12px; font-weight: 700;
-    text-decoration: none; border: none; cursor: pointer;
-    transition: opacity .2s; white-space: nowrap; flex-shrink: 0;
-  }
-  .btn-dl:hover { opacity: .85; }
-  .btn-dl svg { width:16px; height:16px; flex-shrink:0; }
-  .btn-excel { background: var(--accent); color: #0b0f14; }
-  .btn-apk   { background: var(--amber);  color: #0b0f14; }
-  .btn-apk-disabled {
-    background: var(--border); color: var(--muted); cursor: not-allowed;
-    font-size: 11px;
-  }
-
-  /* ── Tabla ── */
-  .table-wrap {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; overflow: hidden;
-  }
-  .table-head {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 18px; border-bottom: 1px solid var(--border);
-  }
-  .table-title { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:2px; }
-  .countdown   { font-family:var(--mono); font-size:11px; color:var(--muted);
-                 display:flex; align-items:center; gap:6px; }
-  .cnt-bar  { width:50px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
-  .cnt-fill { height:100%; background:var(--accent); transition:width 1s linear; }
-
-  table { width:100%; border-collapse:collapse; }
-  thead th {
-    background:#0d1620; padding:8px 12px;
-    font-family:var(--mono); font-size:9px; color:var(--muted);
-    text-transform:uppercase; letter-spacing:1px;
-    text-align:center; border-bottom:1px solid var(--border);
-  }
-  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
-  tbody tr:hover { background:rgba(0,212,170,.04); }
-  tbody td { padding:8px 12px; font-size:12px; font-family:var(--mono); text-align:center; }
-  .badge { display:inline-block; padding:1px 7px; border-radius:4px; font-size:10px;
-           background:rgba(0,212,170,.1); color:var(--accent);
-           border:1px solid rgba(0,212,170,.2); }
-  .empty { text-align:center; padding:48px; color:var(--muted);
-           font-family:var(--mono); font-size:12px; }
-
-  /* ── Toast ── */
-  #toast {
-    position:fixed; bottom:20px; right:20px;
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:8px; padding:10px 18px;
-    font-family:var(--mono); font-size:12px;
-    display:none; z-index:999; max-width:320px;
-  }
-  #toast.ok  { border-color:var(--success); color:var(--success); }
-  #toast.err { border-color:var(--red);     color:var(--red); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRON AGRÍCOLA · MPU6050 · Jeffrey Bejarano</title>
+  <meta name="description" content="Dashboard en tiempo real para sistema robótico de reforestación inspirado en Da Vinci. ESP32 + MPU6050 + FastAPI.">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
 
-<header>
-  <div class="logo">DRON<span>/</span>AGRÍCOLA <span>· MPU6050</span></div>
-  <div class="header-right">
-    <span><span class="dot"></span>EN LÍNEA</span>
-    <span id="last-update">—</span>
-  </div>
-</header>
+<!-- ═══════════════════════════════════════════════════════════════
+     HEADER — sticky, with timer ring + status
+═══════════════════════════════════════════════════════════════ -->
+<div id="header">
+  <div class="header-inner wrap">
 
-<main>
-
-  <!-- KPIs -->
-  <div class="kpi-strip">
-    <div class="kpi">
-      <div class="kpi-label">Total disparos</div>
-      <div class="kpi-value" id="kpi-n">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Último Accel Z</div>
-      <div class="kpi-value" id="kpi-az">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Último Gyro Z</div>
-      <div class="kpi-value" id="kpi-gz">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Disparo #</div>
-      <div class="kpi-value" id="kpi-d">—</div>
-    </div>
-  </div>
-
-  <!-- Botones de descarga -->
-  <div class="download-row">
-
-    <!-- Excel -->
-    <div class="dl-card">
-      <div class="dl-info">
-        <h3>📊 Exportar datos Excel</h3>
-        <p>Datos + estadísticas (media, varianza, regresión)</p>
+    <!-- Brand -->
+    <div class="brand-block">
+      <span class="drone-glyph" aria-label="drone">🚁</span>
+      <div class="brand-text">
+        <div class="brand-title">DRON / AGRÍCOLA</div>
+        <div class="brand-sub">ESP32 · MPU6050 · FastAPI · Render</div>
       </div>
-      <a class="btn-dl btn-excel" href="/api/export-excel" download="dron_agricola.xlsx">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        DESCARGAR EXCEL
+    </div>
+
+    <!-- Status strip -->
+    <div class="status-strip">
+      <div class="status-item">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-txt">CONECTANDO…</span>
+      </div>
+      <div class="status-item">
+        <span>TOTAL REGISTROS:</span>
+        <span class="status-val" id="total-records-val">—</span>
+      </div>
+      <div class="status-item">
+        <!-- Timer ring SVG -->
+        <div class="timer-wrap">
+          <svg class="timer-ring" viewBox="0 0 20 20" width="22" height="22">
+            <circle class="timer-bg" cx="10" cy="10" r="9"/>
+            <circle class="timer-arc" id="timer-arc" cx="10" cy="10" r="9"/>
+          </svg>
+        </div>
+        <span id="timer-val">5s</span>
+        <span style="color:var(--muted)">REFRESCO</span>
+      </div>
+      <div class="status-item">
+        <span style="color:var(--muted)">ODS 15</span>&nbsp;🌱&nbsp;
+        <span style="color:var(--muted)">ODS 9</span>&nbsp;🏭
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <a class="btn btn-green" href="/api/export-excel" id="btn-excel">
+        <span class="btn-icon">⬇</span>EXCEL + STATS
+      </a>
+      <a class="btn btn-amber" href="/static/DronAgricola.apk" download id="btn-apk">
+        <span class="btn-icon">📱</span>APK ANDROID
+        <span class="dl-count" id="apk-counter">0</span>
       </a>
     </div>
 
-    <!-- APK -->
+  </div><!-- /header-inner -->
+</div><!-- /header -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     KPI STRIP — 6 métricas en tiempo real (izq → der)
+═══════════════════════════════════════════════════════════════ -->
+<div id="kpi-strip" class="wrap" style="max-width:100%;padding:0">
+  <div class="kpi-cell" style="--kpi-accent:var(--green)">
+    <div class="kpi-label">Total disparos</div>
+    <div class="kpi-value" id="kpi-disparos">—</div>
+    <div class="kpi-sub">sesiones de disparo</div>
+  </div>
+  <div class="kpi-cell" style="--kpi-accent:var(--green2)">
+    <div class="kpi-label">Último Accel Z</div>
+    <div class="kpi-value" id="kpi-az">—</div>
+    <div class="kpi-sub">ref. 1g = reposo plano</div>
+  </div>
+  <div class="kpi-cell" style="--kpi-accent:var(--amber)">
+    <div class="kpi-label">Último Gyro Z</div>
+    <div class="kpi-value" id="kpi-gz">—</div>
+    <div class="kpi-sub">rotación yaw (°/s)</div>
+  </div>
+  <div class="kpi-cell" style="--kpi-accent:var(--cyan)">
+    <div class="kpi-label">Registros válidos</div>
+    <div class="kpi-value" id="kpi-valid">—</div>
+    <div class="kpi-sub">excluye lecturas en 0</div>
+  </div>
+  <div class="kpi-cell" style="--kpi-accent:var(--red)">
+    <div class="kpi-label">Pico Gyro X (abs)</div>
+    <div class="kpi-value" id="kpi-gxpeak">—</div>
+    <div class="kpi-sub">máximo absoluto</div>
+  </div>
+  <div class="kpi-cell" style="--kpi-accent:var(--green)">
+    <div class="kpi-label">Disparo actual</div>
+    <div class="kpi-value" id="kpi-last">—</div>
+    <div class="kpi-sub">último registrado</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN CONTENT — Live table (left) + Downloads (right)
+═══════════════════════════════════════════════════════════════ -->
+<div id="main-content">
+
+  <!-- LEFT — Datos en vivo PRIMERO -->
+  <section id="live-panel">
+    <div class="panel-header">
+      <span class="panel-title">// REGISTROS MPU6050 — DISPAROS</span>
+      <span class="panel-badge">ACTUALIZA CADA 5s</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>DISPARO #</th>
+            <th>ACCEL X (g)</th>
+            <th>ACCEL Y (g)</th>
+            <th>ACCEL Z (g)</th>
+            <th>GYRO X (°/s)</th>
+            <th>GYRO Y (°/s)</th>
+            <th>GYRO Z (°/s)</th>
+            <th>TIMESTAMP</th>
+          </tr>
+        </thead>
+        <tbody id="live-tbody">
+          <tr><td colspan="9" class="loader-line">Conectando con la API…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- RIGHT — Downloads + Project info -->
+  <aside id="right-panel">
+
+    <!-- Excel download -->
     <div class="dl-card">
-      <div class="dl-info">
-        <h3>📱 App Android (APK)</h3>
-        <p>Control del dron por Bluetooth</p>
-      </div>
-      <a class="btn-dl btn-apk" href="/static/DronAgricola.apk" download="DronAgricola.apk" id="btn-apk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        DESCARGAR APK
+      <div class="dl-card-title">📊 Exportar datos Excel</div>
+      <div class="dl-card-desc">Datos crudos + estadísticas completas (media, varianza, Q1–Q3, IQR, CV, Pearson, regresión, histogramas con bins reales)</div>
+      <a class="btn btn-green" href="/api/export-excel" style="width:100%;justify-content:center">
+        <span class="btn-icon">⬇</span>DESCARGAR EXCEL
       </a>
     </div>
 
-  </div>
+    <!-- APK download with counter -->
+    <div class="dl-card">
+      <div class="dl-card-title">📱 App Android (APK)</div>
+      <div class="dl-card-desc">Control del dron por Bluetooth · Kotlin · BluetoothService + Coroutines</div>
+      <div class="counter-display">
+        <span class="counter-number" id="apk-counter">0</span>
+        <div>
+          <div class="counter-label">descargas</div>
+          <div style="font-size:.6rem;color:var(--muted)">desde este dispositivo</div>
+        </div>
+      </div>
+      <a class="btn btn-amber" href="/static/DronAgricola.apk" download id="btn-apk"
+         style="width:100%;justify-content:center">
+        <span class="btn-icon">📲</span>DESCARGAR APK
+      </a>
+    </div>
 
-  <!-- Tabla -->
-  <div class="table-wrap">
-    <div class="table-head">
-      <div class="table-title">// REGISTROS MPU6050 — DISPAROS</div>
-      <div class="countdown">
-        Actualiza en <span id="cnt-num">5</span>s
-        <div class="cnt-bar"><div class="cnt-fill" id="cnt-fill" style="width:100%"></div></div>
+    <!-- Project info -->
+    <div class="info-card">
+      <div class="info-card-title">ℹ Sobre el proyecto</div>
+      <div class="info-line">
+        <span class="info-ico">👤</span>
+        <span><b style="color:var(--green2)">Jeffrey Alejandro Bejarano Parada</b><br>
+        <span style="color:var(--muted)">67001609 · Universidad Católica de Colombia · 2026-1</span></span>
+      </div>
+      <div class="info-line">
+        <span class="info-ico">🌐</span>
+        <span>
+          <span class="info-label">API: </span>
+          <a href="https://dron-agricola-api-3.onrender.com" target="_blank">dron-agricola-api-3.onrender.com</a>
+        </span>
+      </div>
+      <div class="info-line">
+        <span class="info-ico">📖</span>
+        <span>
+          <span class="info-label">Docs: </span>
+          <a href="https://dron-agricola-api-3.onrender.com/docs" target="_blank">/docs (Swagger UI)</a>
+        </span>
+      </div>
+      <div class="info-line">
+        <span class="info-ico">💻</span>
+        <span>
+          <span class="info-label">Repo: </span>
+          <a href="https://github.com/Jeff07K/DRON_AGRICOLA_API" target="_blank">github.com/Jeff07K/DRON_AGRICOLA_API</a>
+        </span>
+      </div>
+      <div class="info-line">
+        <span class="info-ico">💲</span>
+        <span>
+          <span class="info-label">3D: </span>
+          <a href="https://cults3d.com/es/modelo-3d/juegos/adaptador-tamiya-70100" target="_blank">Adaptador Tamiya 70100 · Cults3D</a>
+        </span>
+      </div>
+      <div class="info-line">
+        <span class="info-ico">🌱</span>
+        <span style="font-family:var(--font-body);font-style:italic;font-size:.82rem;color:var(--muted)">
+          Inspirado en el Carro Armado de Leonardo Da Vinci (1487) — primer concepto de tracción diferencial — y el Tornillo de Arquímedes para transporte rotacional de semillas.
+        </span>
       </div>
     </div>
-    <div id="table-container">
-      <div class="empty">Cargando datos...</div>
-    </div>
+
+  </aside><!-- /right-panel -->
+</div><!-- /main-content -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CHARTS SECTION — tabs: Radar · Acelerómetro · Giroscopio · Estadísticas
+═══════════════════════════════════════════════════════════════ -->
+<section id="charts-section">
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="radar">🎯 BARRIL (RADAR)</button>
+    <button class="tab-btn" data-tab="accel">📈 ACELERÓMETRO</button>
+    <button class="tab-btn" data-tab="gyro">🌀 GIROSCOPIO</button>
+    <button class="tab-btn" data-tab="stats">📊 ESTADÍSTICAS</button>
   </div>
 
-</main>
+  <!-- ── TAB: RADAR ──────────────────────────────────────────── -->
+  <div class="tab-content active" id="tab-radar">
+    <div class="chart-grid">
 
-<div id="toast"></div>
+      <!-- Radar single disparo -->
+      <div class="chart-panel active">
+        <div class="chart-label">Barril — Disparo Único</div>
+        <div class="chart-sublabel">Selecciona un disparo · 6 ejes normalizados al máximo observado</div>
+        <div id="radar-sel" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px"></div>
+        <canvas id="chart-radar-single" height="260"></canvas>
+      </div>
 
-<script>
-const API      = window.location.origin;
-const INTERVAL = 5000;
-let   timer    = 5;
-let   interval;
+      <!-- Radar compare -->
+      <div class="chart-panel active">
+        <div class="chart-label">Barril — Comparar 2 Disparos</div>
+        <div class="chart-sublabel">Disparo A (verde) vs B (ámbar) · superpuestos en el mismo barril</div>
+        <canvas id="chart-radar-compare" height="260"></canvas>
+      </div>
 
-async function loadData() {
-  try {
-    const res  = await fetch(`${API}/api/sensor-data`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    renderTable(data);
-    renderKPIs(data);
-    document.getElementById('last-update').textContent =
-      'Act: ' + new Date().toLocaleTimeString();
-  } catch(e) {
-    document.getElementById('table-container').innerHTML =
-      `<div class="empty">⚠ No se pudo conectar: ${e.message}</div>`;
-  }
-}
+      <!-- Radar global -->
+      <div class="chart-panel active">
+        <div class="chart-label">Barril — Intensidad Media Global</div>
+        <div class="chart-sublabel">Promedio absoluto de todos los disparos · Qué eje tiene más actividad</div>
+        <canvas id="chart-radar-global" height="260"></canvas>
+      </div>
 
-function renderKPIs(data) {
-  document.getElementById('kpi-n').textContent = data.length;
-  if (!data.length) return;
-  const last = data[data.length - 1];
-  document.getElementById('kpi-az').textContent = (last.accel_z||0).toFixed(3);
-  document.getElementById('kpi-gz').textContent = (last.gyro_z||0).toFixed(4);
-  document.getElementById('kpi-d').textContent  = last.disparo;
-}
+    </div><!-- /chart-grid radar -->
+  </div><!-- /tab-radar -->
 
-function renderTable(data) {
-  const container = document.getElementById('table-container');
-  if (!data.length) {
-    container.innerHTML =
-      '<div class="empty">Sin registros — presiona DISPARO en la app para comenzar</div>';
-    return;
-  }
-  const rows = [...data].reverse().map(r => `
-    <tr>
-      <td><span class="badge">#${r.id}</span></td>
-      <td>${r.disparo}</td>
-      <td>${(r.accel_x||0).toFixed(4)}</td>
-      <td>${(r.accel_y||0).toFixed(4)}</td>
-      <td>${(r.accel_z||0).toFixed(4)}</td>
-      <td>${(r.gyro_x||0).toFixed(4)}</td>
-      <td>${(r.gyro_y||0).toFixed(4)}</td>
-      <td>${(r.gyro_z||0).toFixed(4)}</td>
-      <td style="color:var(--muted);font-size:10px">
-        ${(r.timestamp||'').replace('T',' ').substring(0,19)}
-      </td>
-    </tr>`).join('');
+  <!-- ── TAB: ACELERÓMETRO ───────────────────────────────────── -->
+  <div class="tab-content" id="tab-accel">
+    <div class="chart-grid">
 
-  container.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>ID</th><th>Disparo #</th>
-        <th>Accel X</th><th>Accel Y</th><th>Accel Z</th>
-        <th>Gyro X</th><th>Gyro Y</th><th>Gyro Z</th>
-        <th>Timestamp</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
+      <div class="chart-panel active">
+        <div class="chart-label">Media de los 3 Ejes (g)</div>
+        <div class="chart-sublabel">Línea roja = 1g · referencia gravedad · Accel Z debería ser ≈ 1g en reposo</div>
+        <canvas id="chart-accel-bar" height="220"></canvas>
+      </div>
 
-function startCountdown() {
-  timer = INTERVAL / 1000;
-  clearInterval(interval);
-  interval = setInterval(() => {
-    timer--;
-    document.getElementById('cnt-num').textContent  = timer;
-    document.getElementById('cnt-fill').style.width = (timer / (INTERVAL/1000) * 100) + '%';
-    if (timer <= 0) { loadData(); timer = INTERVAL / 1000; }
-  }, 1000);
-}
+      <div class="chart-panel active">
+        <div class="chart-label">Dispersión Accel X vs Accel Y</div>
+        <div class="chart-sublabel">Cada punto = media de un disparo · r de Pearson en la leyenda</div>
+        <canvas id="chart-accel-scatter" height="220"></canvas>
+      </div>
 
-// Verificar si el APK existe
-fetch('/static/DronAgricola.apk', { method: 'HEAD' })
-  .then(r => {
-    if (!r.ok) {
-      const btn = document.getElementById('btn-apk');
-      btn.className = 'btn-dl btn-apk-disabled';
-      btn.removeAttribute('href');
-      btn.removeAttribute('download');
-      btn.innerHTML = 'APK no disponible aún';
-    }
-  }).catch(() => {});
+      <div class="chart-panel active">
+        <div class="chart-label">Histograma Accel Z — Bins Reales</div>
+        <div class="chart-sublabel">Verde = zona ≈ 1g (saludable) · Rango real: −0.7 a 1.3 g</div>
+        <canvas id="chart-accel-hist" height="220"></canvas>
+      </div>
 
-loadData();
-startCountdown();
-</script>
+      <div class="chart-panel active span2">
+        <div class="chart-label">Accel Z por Disparo — Evolución Temporal</div>
+        <div class="chart-sublabel">Media de Accel Z en cada disparo · línea roja = 1g</div>
+        <canvas id="chart-accel-line" height="160"></canvas>
+      </div>
+
+    </div>
+  </div><!-- /tab-accel -->
+
+  <!-- ── TAB: GIROSCOPIO ────────────────────────────────────── -->
+  <div class="tab-content" id="tab-gyro">
+    <div class="chart-grid">
+
+      <div class="chart-panel active">
+        <div class="chart-label">Media de los 3 Ejes (°/s)</div>
+        <div class="chart-sublabel">Barras negativas = rotación opuesta al eje · Hover muestra σ</div>
+        <canvas id="chart-gyro-bar" height="220"></canvas>
+      </div>
+
+      <div class="chart-panel active">
+        <div class="chart-label">Histograma Gyro X — Bins Reales (−90 a +97°/s)</div>
+        <div class="chart-sublabel">Rojo = rotación negativa (pitch hacia atrás) · ámbar = positiva</div>
+        <canvas id="chart-gyro-hist" height="220"></canvas>
+      </div>
+
+      <div class="chart-panel active">
+        <div class="chart-label">Varianza por Eje Giroscópico (°/s)²</div>
+        <div class="chart-sublabel">Alta varianza = mayor vibración e inestabilidad en ese eje</div>
+        <canvas id="chart-gyro-variance" height="220"></canvas>
+      </div>
+
+      <div class="chart-panel active span3">
+        <div class="chart-label">Gyro X, Y, Z — Evolución por Disparo</div>
+        <div class="chart-sublabel">Media de cada eje giroscópico en cada disparo · muestra todos los disparos</div>
+        <canvas id="chart-gyro-line" height="150"></canvas>
+      </div>
+
+    </div>
+  </div><!-- /tab-gyro -->
+
+  <!-- ── TAB: ESTADÍSTICAS ──────────────────────────────────── -->
+  <div class="tab-content" id="tab-stats">
+
+    <!-- Full-width stats table -->
+    <div class="chart-grid" style="grid-template-columns:1fr">
+      <div class="chart-panel active" style="overflow-x:auto">
+        <div class="chart-label">Estadística Descriptiva Completa — Todos los Ejes</div>
+        <div class="chart-sublabel">Media, varianza, desv.est, Q1, mediana, Q3, IQR, coef. variación · n = registros válidos</div>
+        <table class="stats-tbl">
+          <thead>
+            <tr>
+              <th>Variable</th><th>Unidad</th><th>N</th>
+              <th>Media</th><th>Varianza</th><th>Desv. Est.</th>
+              <th>Mín</th><th>Q1</th><th>Mediana</th><th>Q3</th><th>Máx</th>
+              <th>IQR</th><th>CV (%)</th><th>Estabilidad</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody">
+            <tr><td colspan="14" class="loader-line">Calculando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Regression + prob output -->
+    <div class="chart-grid" style="grid-template-columns:1fr">
+      <div class="chart-panel active">
+        <div class="chart-label">Regresión Lineal Accel X → Accel Y + Análisis Probabilístico</div>
+        <div id="reg-output"><div class="loader-line">Calculando regresión…</div></div>
+      </div>
+    </div>
+
+    <!-- Chart grid: CV + Pearson + Normal curve -->
+    <div class="chart-grid">
+      <div class="chart-panel active">
+        <div class="chart-label">Coeficiente de Variación (%) por Eje</div>
+        <div class="chart-sublabel">CV &lt; 30% = estable · 30–100% = moderado · &gt;100% = alta variabilidad</div>
+        <canvas id="chart-stats-cv" height="220"></canvas>
+      </div>
+      <div class="chart-panel active">
+        <div class="chart-label">Correlación de Pearson — Pares de Ejes</div>
+        <div class="chart-sublabel">Verde |r| &gt; 0.5 · ámbar |r| &gt; 0.3 · rojo = independiente</div>
+        <canvas id="chart-stats-corr" height="220"></canvas>
+      </div>
+      <div class="chart-panel active">
+        <div class="chart-label">FDP Normal — Accel X ~ N(μ, σ²)</div>
+        <div class="chart-sublabel">Función de densidad de probabilidad modelada · P(X&lt;0) ≈ 32.1%</div>
+        <canvas id="chart-stats-normal" height="220"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /tab-stats -->
+
+</section><!-- /charts-section -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-left">
+    Sistema robótico inspirado en el <strong>Carro Armado de Leonardo Da Vinci (1487)</strong> ·
+    <strong>Jeffrey A. Bejarano Parada</strong> · Universidad Católica de Colombia · 2026-1
+  </div>
+  <div class="footer-right">
+    ESP32 · MPU6050 · L298N × 2 · Kotlin BT · FastAPI · Neon PostgreSQL · Render
+  </div>
+</footer>
+
 </body>
 </html>
