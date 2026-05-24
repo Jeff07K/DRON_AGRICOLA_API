@@ -1,316 +1,364 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dron Agrícola</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="shortcut icon" href="https://digimon.net/profile/images/profile/kodai/img_kodai_10.png" />
-<style>
-  :root {
-    --bg:      #0b0f14;
-    --surface: #111820;
-    --border:  #1e2d3d;
-    --accent:  #00d4aa;
-    --amber:   #f59e0b;
-    --blue:    #3b82f6;
-    --red:     #ef4444;
-    --text:    #e2e8f0;
-    --muted:   #64748b;
-    --success: #22c55e;
-    --mono:    'Space Mono', monospace;
-    --sans:    'Inter', sans-serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
-
-  /* ── Header ── */
-  header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-  }
-  .logo { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 2px; }
-  .logo span { color: var(--muted); }
-  .dot { width:8px; height:8px; border-radius:50%; background:var(--success);
-         display:inline-block; margin-right:6px; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .header-right { font-family:var(--mono); font-size:11px; color:var(--muted);
-                  display:flex; align-items:center; gap:16px; }
-
-  main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
-
-  /* ── KPIs ── */
-  .kpi-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px; margin-bottom: 20px;
-  }
-  .kpi {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 14px 12px; position: relative; overflow: hidden;
-  }
-  .kpi::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--accent); }
-  .kpi:nth-child(2)::before { background:var(--amber); }
-  .kpi:nth-child(3)::before { background:var(--blue); }
-  .kpi:nth-child(4)::before { background:#a78bfa; }
-  .kpi-label { font-size:9px; color:var(--muted); text-transform:uppercase;
-               letter-spacing:1.5px; margin-bottom:6px; font-family:var(--mono); }
-  .kpi-value { font-size:24px; font-weight:600; font-family:var(--mono); }
-
-  /* ── Botones de descarga ── */
-  .download-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px; margin-bottom: 20px;
-  }
-  @media (max-width: 540px) { .download-row { grid-template-columns: 1fr; } }
-
-  .dl-card {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 20px;
-  }
-  .dl-info h3 { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
-  .dl-info p  { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-
-  .btn-dl {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 20px; border-radius: 8px;
-    font-family: var(--mono); font-size: 12px; font-weight: 700;
-    text-decoration: none; border: none; cursor: pointer;
-    transition: opacity .2s; white-space: nowrap; flex-shrink: 0;
-  }
-  .btn-dl:hover { opacity: .85; }
-  .btn-dl svg { width:16px; height:16px; flex-shrink:0; }
-  .btn-excel { background: var(--accent); color: #0b0f14; }
-  .btn-apk   { background: var(--amber);  color: #0b0f14; }
-  .btn-apk-disabled {
-    background: var(--border); color: var(--muted); cursor: not-allowed;
-    font-size: 11px;
-  }
-
-  /* ── Tabla ── */
-  .table-wrap {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; overflow: hidden;
-  }
-  .table-head {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 18px; border-bottom: 1px solid var(--border);
-  }
-  .table-title { font-family:var(--mono); font-size:11px; color:var(--accent); letter-spacing:2px; }
-  .countdown   { font-family:var(--mono); font-size:11px; color:var(--muted);
-                 display:flex; align-items:center; gap:6px; }
-  .cnt-bar  { width:50px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
-  .cnt-fill { height:100%; background:var(--accent); transition:width 1s linear; }
-
-  table { width:100%; border-collapse:collapse; }
-  thead th {
-    background:#0d1620; padding:8px 12px;
-    font-family:var(--mono); font-size:9px; color:var(--muted);
-    text-transform:uppercase; letter-spacing:1px;
-    text-align:center; border-bottom:1px solid var(--border);
-  }
-  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
-  tbody tr:hover { background:rgba(0,212,170,.04); }
-  tbody td { padding:8px 12px; font-size:12px; font-family:var(--mono); text-align:center; }
-  .badge { display:inline-block; padding:1px 7px; border-radius:4px; font-size:10px;
-           background:rgba(0,212,170,.1); color:var(--accent);
-           border:1px solid rgba(0,212,170,.2); }
-  .empty { text-align:center; padding:48px; color:var(--muted);
-           font-family:var(--mono); font-size:12px; }
-
-  /* ── Toast ── */
-  #toast {
-    position:fixed; bottom:20px; right:20px;
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:8px; padding:10px 18px;
-    font-family:var(--mono); font-size:12px;
-    display:none; z-index:999; max-width:320px;
-  }
-  #toast.ok  { border-color:var(--success); color:var(--success); }
-  #toast.err { border-color:var(--red);     color:var(--red); }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRON AGRÍCOLA · MPU6050 · Jeffrey Bejarano</title>
+  <meta name="description" content="Sistema robótico de reforestación inspirado en Da Vinci. ESP32 + MPU6050 + FastAPI. Jeffrey Bejarano — 67001609 · Universidad Católica de Colombia.">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
 
-<header>
-  <div class="logo">DRON<span>/</span>AGRÍCOLA <span>· MPU6050</span></div>
-  <div class="header-right">
-    <span><span class="dot"></span>EN LÍNEA</span>
-    <span id="last-update">—</span>
+<!-- ═══════════════════════════════════════════════════════
+     HEADER — sticky
+════════════════════════════════════════════════════════ -->
+<div id="header">
+  <div class="header-inner">
+
+    <div class="brand-block">
+      <span class="drone-glyph">🚁</span>
+      <div class="brand-text">
+        <div class="brand-title">DRON / AGRÍCOLA</div>
+        <div class="brand-sub">ESP32 · MPU6050 · FastAPI · Neon PostgreSQL · Render</div>
+      </div>
+    </div>
+
+    <div class="status-strip">
+      <div class="status-item">
+        <span class="s-dot" id="s-dot"></span>
+        <span id="s-txt">CONECTANDO…</span>
+      </div>
+      <div class="status-item">
+        <span id="s-rec" class="status-val"></span>
+      </div>
+      <div class="status-item">
+        <div class="timer-ring-wrap">
+          <svg class="t-ring" viewBox="0 0 20 20" width="22" height="22">
+            <circle class="t-bg" cx="10" cy="10" r="9"/>
+            <circle class="t-arc" id="t-arc" cx="10" cy="10" r="9"/>
+          </svg>
+        </div>
+        <span id="t-lbl">5s</span>
+        <span>REFRESCO</span>
+      </div>
+      <div class="status-item">ODS 15 🌱 &nbsp; ODS 9 🏭</div>
+    </div>
+
+    <div class="header-actions">
+      <a class="btn btn-g" href="/api/export-excel">
+        <span>⬇</span> EXCEL + STATS
+      </a>
+      <a class="btn btn-a" href="/static/DronAgricola.apk" download id="btn-apk-hdr">
+        <span>📱</span> APK ANDROID
+        <span class="dl-badge" id="apk-hdr">0</span>
+      </a>
+    </div>
+
   </div>
-</header>
+</div>
 
-<main>
-
-  <!-- KPIs -->
-  <div class="kpi-strip">
-    <div class="kpi">
-      <div class="kpi-label">Total disparos</div>
-      <div class="kpi-value" id="kpi-n">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Último Accel Z</div>
-      <div class="kpi-value" id="kpi-az">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Último Gyro Z</div>
-      <div class="kpi-value" id="kpi-gz">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Disparo #</div>
-      <div class="kpi-value" id="kpi-d">—</div>
-    </div>
+<!-- ═══════════════════════════════════════════════════════
+     KPI STRIP — 6 métricas, izquierda a derecha
+════════════════════════════════════════════════════════ -->
+<div id="kpi-strip">
+  <div class="kpi" style="--kc:var(--green)">
+    <div class="kpi-lbl">Total disparos</div>
+    <div class="kpi-val" id="k-d">—</div>
+    <div class="kpi-sub">sesiones registradas</div>
   </div>
+  <div class="kpi" style="--kc:var(--green2)">
+    <div class="kpi-lbl">Último Accel Z</div>
+    <div class="kpi-val" id="k-az">—</div>
+    <div class="kpi-sub">ref. 1g = reposo plano</div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <div class="kpi-lbl">Último Gyro Z</div>
+    <div class="kpi-val" id="k-gz">—</div>
+    <div class="kpi-sub">rotación yaw (°/s)</div>
+  </div>
+  <div class="kpi" style="--kc:var(--cyan)">
+    <div class="kpi-lbl">Registros válidos</div>
+    <div class="kpi-val" id="k-v">—</div>
+    <div class="kpi-sub">excluye lecturas en 0</div>
+  </div>
+  <div class="kpi" style="--kc:var(--red)">
+    <div class="kpi-lbl">Pico Gyro X (abs)</div>
+    <div class="kpi-val" id="k-gx">—</div>
+    <div class="kpi-sub">máximo absoluto (°/s)</div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <div class="kpi-lbl">Disparo actual</div>
+    <div class="kpi-val" id="k-l">—</div>
+    <div class="kpi-sub">último registrado</div>
+  </div>
+</div>
 
-  <!-- Botones de descarga -->
-  <div class="download-row">
+<!-- ═══════════════════════════════════════════════════════
+     MAIN GRID — live table (izq) + sidebar (der)
+════════════════════════════════════════════════════════ -->
+<div id="main-grid">
+
+  <!-- DATOS EN VIVO — primero, columna izquierda -->
+  <section id="live-panel">
+    <div class="panel-hdr">
+      <span class="panel-title">// REGISTROS MPU6050 — DISPAROS</span>
+      <span class="panel-badge">ACTUALIZA CADA 5s</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>DISPARO #</th>
+            <th>ACCEL X (g)</th>
+            <th>ACCEL Y (g)</th>
+            <th>ACCEL Z (g)</th>
+            <th>GYRO X (°/s)</th>
+            <th>GYRO Y (°/s)</th>
+            <th>GYRO Z (°/s)</th>
+            <th>TIMESTAMP</th>
+          </tr>
+        </thead>
+        <tbody id="t-body">
+          <tr><td colspan="9" class="loader">Conectando con la API…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SIDEBAR DERECHA -->
+  <aside id="right-sidebar">
 
     <!-- Excel -->
-    <div class="dl-card">
-      <div class="dl-info">
-        <h3>📊 Exportar datos Excel</h3>
-        <p>Datos + estadísticas (media, varianza, regresión)</p>
-      </div>
-      <a class="btn-dl btn-excel" href="/api/export-excel" download="dron_agricola.xlsx">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        DESCARGAR EXCEL
+    <div class="side-card">
+      <div class="side-title">📊 Exportar datos Excel</div>
+      <div class="side-desc">Datos crudos + estadísticas completas: media, varianza, Q1–Q3, IQR, CV, Pearson, regresión, histogramas con bins reales, análisis probabilístico</div>
+      <a class="btn btn-g" href="/api/export-excel" style="justify-content:center">
+        <span>⬇</span> DESCARGAR EXCEL
       </a>
     </div>
 
-    <!-- APK -->
-    <div class="dl-card">
-      <div class="dl-info">
-        <h3>📱 App Android (APK)</h3>
-        <p>Control del dron por Bluetooth</p>
+    <!-- APK + contador -->
+    <div class="side-card">
+      <div class="side-title">📱 App Android (APK)</div>
+      <div class="side-desc">Control del dron por Bluetooth · Kotlin · BluetoothService + Coroutines · buffer acumulativo</div>
+      <div class="apk-counter-row">
+        <span class="apk-num" id="apk-num">0</span>
+        <div class="apk-lbl-col">
+          <span class="apk-lbl">descargas</span>
+          <span class="apk-sub">contador global en BD</span>
+        </div>
       </div>
-      <a class="btn-dl btn-apk" href="/static/DronAgricola.apk" download="DronAgricola.apk" id="btn-apk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        DESCARGAR APK
+      <a class="btn btn-a" href="/static/DronAgricola.apk" download
+         id="btn-apk" style="justify-content:center">
+        <span>📲</span> DESCARGAR APK
       </a>
     </div>
 
-  </div>
-
-  <!-- Tabla -->
-  <div class="table-wrap">
-    <div class="table-head">
-      <div class="table-title">// REGISTROS MPU6050 — DISPAROS</div>
-      <div class="countdown">
-        Actualiza en <span id="cnt-num">5</span>s
-        <div class="cnt-bar"><div class="cnt-fill" id="cnt-fill" style="width:100%"></div></div>
+    <!-- Info proyecto -->
+    <div class="proj-card">
+      <div class="proj-title">ℹ Sobre el proyecto</div>
+      <div class="info-row">
+        <span class="info-ico">👤</span>
+        <span>
+          <b style="color:var(--green2)">Jeffrey Alejandro Bejarano Parada</b><br>
+          <span style="color:var(--muted)">67001609 · Universidad Católica de Colombia · 2026-1</span>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-ico">🌐</span>
+        <span>
+          <span class="info-sub">API: </span>
+          <a href="https://dron-agricola-api-3.onrender.com" target="_blank">dron-agricola-api-3.onrender.com</a>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-ico">📖</span>
+        <span>
+          <span class="info-sub">Docs: </span>
+          <a href="https://dron-agricola-api-3.onrender.com/docs" target="_blank">/docs · Swagger UI</a>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-ico">💻</span>
+        <span>
+          <span class="info-sub">GitHub: </span>
+          <a href="https://github.com/Jeff07K/DRON_AGRICOLA_API" target="_blank">Jeff07K/DRON_AGRICOLA_API</a>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-ico">🖨️</span>
+        <span>
+          <span class="info-sub">3D: </span>
+          <a href="https://cults3d.com/es/modelo-3d/juegos/adaptador-tamiya-70100" target="_blank">Adaptador Tamiya 70100 · Cults3D</a>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-ico">🌱</span>
+        <p class="davinci-note">
+          Inspirado en el <b>Carro Armado de Leonardo Da Vinci (1487)</b> — primer concepto de tracción diferencial — y el <b>Tornillo de Arquímedes</b> para transporte rotacional de semillas de hidrogel.
+        </p>
       </div>
     </div>
-    <div id="table-container">
-      <div class="empty">Cargando datos...</div>
+
+  </aside>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CHARTS — tabs
+════════════════════════════════════════════════════════ -->
+<section id="charts-section">
+
+  <div class="tab-bar">
+    <button class="tab-btn" data-tab="radar">🎯 BARRIL (RADAR)</button>
+    <button class="tab-btn" data-tab="accel">📈 ACELERÓMETRO</button>
+    <button class="tab-btn" data-tab="gyro">🌀 GIROSCOPIO</button>
+    <button class="tab-btn" data-tab="stats">📊 ESTADÍSTICAS</button>
+  </div>
+
+  <!-- TAB RADAR ────────────────────────────────────────── -->
+  <div class="tab-content" id="tab-radar">
+    <div class="cg3">
+      <div class="cc">
+        <div class="cc-lbl">Barril — Disparo único</div>
+        <div class="cc-sub">Selecciona un disparo · 6 ejes normalizados al máximo global observado</div>
+        <div class="r-sel" id="r-sel"></div>
+        <canvas id="ch-r-single" height="260"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Barril — Comparar 2 disparos</div>
+        <div class="cc-sub">Verde = disparo A seleccionado · Ámbar = disparo B (5° de la lista)</div>
+        <canvas id="ch-r-cmp" height="260"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Barril — Intensidad media global</div>
+        <div class="cc-sub">Promedio absoluto de todos los disparos válidos por eje</div>
+        <canvas id="ch-r-global" height="260"></canvas>
+      </div>
     </div>
   </div>
 
-</main>
+  <!-- TAB ACELERÓMETRO ────────────────────────────────── -->
+  <div class="tab-content" id="tab-accel">
+    <div class="cg2">
+      <div class="cc">
+        <div class="cc-lbl">Media de los 3 ejes (g)</div>
+        <div class="cc-sub">Línea roja = 1g · referencia gravedad. Accel Z ≈ 1g en reposo plano.</div>
+        <canvas id="ch-a-bar" height="230"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Dispersión Accel X vs Accel Y</div>
+        <div class="cc-sub">Cada punto = media de un disparo · r de Pearson y p-value en leyenda</div>
+        <canvas id="ch-a-scatter" height="230"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Histograma Accel Z — bins reales</div>
+        <div class="cc-sub">Verde = zona ≈ 1g saludable · Rango real medido: −0.7 a 1.4 g</div>
+        <canvas id="ch-a-hist" height="230"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Accel Z por disparo — evolución temporal</div>
+        <div class="cc-sub">Media de Accel Z en cada disparo · línea roja = referencia 1g</div>
+        <canvas id="ch-a-line" height="230"></canvas>
+      </div>
+    </div>
+  </div>
 
-<div id="toast"></div>
+  <!-- TAB GIROSCOPIO ──────────────────────────────────── -->
+  <div class="tab-content" id="tab-gyro">
+    <div class="cg2">
+      <div class="cc">
+        <div class="cc-lbl">Media de los 3 ejes (°/s)</div>
+        <div class="cc-sub">Barras negativas = rotación opuesta al eje · Hover muestra σ (desv. est.)</div>
+        <canvas id="ch-g-bar" height="230"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Histograma Gyro X — bins reales (−100 a +100°/s)</div>
+        <div class="cc-sub">Rojo = pitch negativo · Ámbar = pitch positivo · Bins ajustados al rango real</div>
+        <canvas id="ch-g-hist" height="230"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Varianza por eje giroscópico (°/s)²</div>
+        <div class="cc-sub">Mayor varianza = mayor inestabilidad/vibración en ese eje de rotación</div>
+        <canvas id="ch-g-var" height="230"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Gyro X, Y, Z — evolución por disparo</div>
+        <div class="cc-sub">Media de cada eje giroscópico por número de disparo · todos los disparos</div>
+        <canvas id="ch-g-line" height="230"></canvas>
+      </div>
+    </div>
+  </div>
 
-<script>
-const API      = window.location.origin;
-const INTERVAL = 5000;
-let   timer    = 5;
-let   interval;
+  <!-- TAB ESTADÍSTICAS ────────────────────────────────── -->
+  <div class="tab-content" id="tab-stats">
 
-async function loadData() {
-  try {
-    const res  = await fetch(`${API}/api/sensor-data`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    renderTable(data);
-    renderKPIs(data);
-    document.getElementById('last-update').textContent =
-      'Act: ' + new Date().toLocaleTimeString();
-  } catch(e) {
-    document.getElementById('table-container').innerHTML =
-      `<div class="empty">⚠ No se pudo conectar: ${e.message}</div>`;
-  }
-}
+    <!-- Tabla descriptiva -->
+    <div class="cg1">
+      <div class="cc" style="overflow-x:auto">
+        <div class="cc-lbl">Estadística descriptiva completa — n registros válidos</div>
+        <div class="cc-sub">Media, varianza, desv.est, Q1, mediana, Q3, IQR, coef. variación · calculado en tiempo real</div>
+        <table class="st-tbl">
+          <thead>
+            <tr>
+              <th>Variable</th><th>Unidad</th><th>N</th>
+              <th>Media</th><th>Varianza</th><th>Desv. Est.</th>
+              <th>Mín</th><th>Q1</th><th>Mediana</th><th>Q3</th><th>Máx</th>
+              <th>IQR</th><th>CV (%)</th><th>Estabilidad</th>
+            </tr>
+          </thead>
+          <tbody id="st-body">
+            <tr><td colspan="14" class="loader">Calculando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-function renderKPIs(data) {
-  document.getElementById('kpi-n').textContent = data.length;
-  if (!data.length) return;
-  const last = data[data.length - 1];
-  document.getElementById('kpi-az').textContent = (last.accel_z||0).toFixed(3);
-  document.getElementById('kpi-gz').textContent = (last.gyro_z||0).toFixed(4);
-  document.getElementById('kpi-d').textContent  = last.disparo;
-}
+    <!-- Regresión + probabilístico -->
+    <div class="cg1">
+      <div class="cc">
+        <div class="cc-lbl">Regresión lineal · Análisis probabilístico · Modelos discretos</div>
+        <div class="cc-sub">B0, B1, R², Pearson, IC 95%, TCL, distribución Normal, Binomial, Geométrica · calculado sobre datos reales</div>
+        <div id="reg-out"><div class="loader">Calculando…</div></div>
+      </div>
+    </div>
 
-function renderTable(data) {
-  const container = document.getElementById('table-container');
-  if (!data.length) {
-    container.innerHTML =
-      '<div class="empty">Sin registros — presiona DISPARO en la app para comenzar</div>';
-    return;
-  }
-  const rows = [...data].reverse().map(r => `
-    <tr>
-      <td><span class="badge">#${r.id}</span></td>
-      <td>${r.disparo}</td>
-      <td>${(r.accel_x||0).toFixed(4)}</td>
-      <td>${(r.accel_y||0).toFixed(4)}</td>
-      <td>${(r.accel_z||0).toFixed(4)}</td>
-      <td>${(r.gyro_x||0).toFixed(4)}</td>
-      <td>${(r.gyro_y||0).toFixed(4)}</td>
-      <td>${(r.gyro_z||0).toFixed(4)}</td>
-      <td style="color:var(--muted);font-size:10px">
-        ${(r.timestamp||'').replace('T',' ').substring(0,19)}
-      </td>
-    </tr>`).join('');
+    <!-- Charts CV + Pearson + FDP -->
+    <div class="cg3">
+      <div class="cc">
+        <div class="cc-lbl">Coeficiente de variación (%) por eje</div>
+        <div class="cc-sub">CV &lt; 30% = estable · 30–100% = moderado · &gt;100% = alta variabilidad</div>
+        <canvas id="ch-s-cv" height="220"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">Correlación de Pearson — pares de ejes</div>
+        <div class="cc-sub">Verde |r| &gt; 0.5 · Ámbar |r| &gt; 0.3 · Rojo = ejes independientes</div>
+        <canvas id="ch-s-corr" height="220"></canvas>
+      </div>
+      <div class="cc">
+        <div class="cc-lbl">FDP Normal — Accel X ~ N(μ, σ²)</div>
+        <div class="cc-sub">Función de densidad de probabilidad modelada · Ajuste gaussiano sobre datos reales</div>
+        <canvas id="ch-s-norm" height="220"></canvas>
+      </div>
+    </div>
 
-  container.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>ID</th><th>Disparo #</th>
-        <th>Accel X</th><th>Accel Y</th><th>Accel Z</th>
-        <th>Gyro X</th><th>Gyro Y</th><th>Gyro Z</th>
-        <th>Timestamp</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>`;
-}
+  </div><!-- /tab-stats -->
 
-function startCountdown() {
-  timer = INTERVAL / 1000;
-  clearInterval(interval);
-  interval = setInterval(() => {
-    timer--;
-    document.getElementById('cnt-num').textContent  = timer;
-    document.getElementById('cnt-fill').style.width = (timer / (INTERVAL/1000) * 100) + '%';
-    if (timer <= 0) { loadData(); timer = INTERVAL / 1000; }
-  }, 1000);
-}
+</section>
 
-// Verificar si el APK existe
-fetch('/static/DronAgricola.apk', { method: 'HEAD' })
-  .then(r => {
-    if (!r.ok) {
-      const btn = document.getElementById('btn-apk');
-      btn.className = 'btn-dl btn-apk-disabled';
-      btn.removeAttribute('href');
-      btn.removeAttribute('download');
-      btn.innerHTML = 'APK no disponible aún';
-    }
-  }).catch(() => {});
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════ -->
+<footer>
+  <div class="ft-l">
+    <strong>Jeffrey A. Bejarano Parada</strong> · 67001609 ·
+    Universidad Católica de Colombia · 2026-1 ·
+    Sistema robótico inspirado en el <strong>Carro Armado de Leonardo Da Vinci (1487)</strong>
+  </div>
+  <div class="ft-r">ESP32 · MPU6050 · L298N×2 · Kotlin BT · FastAPI · Neon PostgreSQL · Render</div>
+</footer>
 
-loadData();
-startCountdown();
-</script>
 </body>
 </html>
