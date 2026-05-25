@@ -9,35 +9,24 @@
 
 /* ─── Variables ──────────────────────────────────────────────────── */
 :root {
-  --bg:        #030a05;
-  --bg2:       #060f08;
-  --surface:   #091410;
-  --card:      #0b1a12;
-  --border:    #0d2416;
-  --border2:   #133020;
-
-  --green:     #00ff6a;
-  --green2:    #00cc55;
-  --green3:    #009940;
-  --green-dim: #00331a;
-  --amber:     #ffb800;
-  --amber2:    #cc9400;
-  --red:       #ff3355;
-  --cyan:      #00e8cc;
-  --blue:      #00bfff;
-  --purple:    #cc44ff;
-  --white:     #d4f0dd;
-  --muted:     #2a5038;
-  --muted2:    #1a3828;
-
-  --font-mono:  'JetBrains Mono', 'Courier New', monospace;
-  --font-title: 'Bebas Neue', sans-serif;
-  --font-body:  'Crimson Pro', Georgia, serif;
-
-  --glow-green: 0 0 20px rgba(0,255,106,.25), 0 0 40px rgba(0,255,106,.1);
-  --glow-amber: 0 0 16px rgba(255,184,0,.3);
+  --bg: #f4f9f0;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --border: #cfe3cf;
+  --border2: #bcd0bc;
+  --green: #2e7d32;
+  --green2: #1b5e20;
+  --green-dim: #e8f5e9;
+  --amber: #f57c00;
+  --amber2: #ef6c00;
+  --red: #d32f2f;
+  --cyan: #00796b;
+  --blue: #0288d1;
+  --purple: #7b1fa2;
+  --white: #1a2e1a;
+  --muted: #5a6e5a;
+  --muted2: #e0efe0;
 }
-
 /* ─── Reset ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -518,4 +507,11 @@ footer {
   .brand-title { font-size: 1.2rem; }
   .header-actions { padding: 0 10px; gap: 5px; }
   .btn { padding: 6px 10px; font-size: .6rem; }
+}
+.graf-explicacion {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+  font-style: italic;
 }

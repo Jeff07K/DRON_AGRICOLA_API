@@ -19,7 +19,19 @@
   <div class="header-inner">
 
     <div class="brand-block">
-      <span class="drone-glyph">🚁</span>
+      <div class="tank-svg">
+       <svg width="36" height="28" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="30" width="55" height="25" rx="4" fill="#4caf50" stroke="#2e7d32" stroke-width="2"/>
+        <rect x="55" y="20" width="18" height="15" rx="2" fill="#388e3c" stroke="#1b5e20" stroke-width="2"/>
+        <line x1="62" y1="20" x2="72" y2="10" stroke="#ffb300" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="35" cy="55" r="8" fill="#2c3e2b" stroke="#1a2e1a" stroke-width="2"/>
+        <circle cx="65" cy="55" r="8" fill="#2c3e2b" stroke="#1a2e1a" stroke-width="2"/>
+        <rect x="15" y="45" width="8" height="15" rx="2" fill="#5d4037" />
+        <rect x="72" y="45" width="8" height="15" rx="2" fill="#5d4037" />
+        <circle cx="35" cy="55" r="3" fill="#a1887f"/>
+        <circle cx="65" cy="55" r="3" fill="#a1887f"/>
+       </svg>
+      </div>
       <div class="brand-text">
         <div class="brand-title">DRON / AGRÍCOLA</div>
         <div class="brand-sub">ESP32 · MPU6050 · FastAPI · Neon PostgreSQL · Render</div>
@@ -227,16 +239,19 @@
         <div class="cc-sub">Selecciona un disparo · 6 ejes normalizados al máximo global observado</div>
         <div class="r-sel" id="r-sel"></div>
         <canvas id="ch-r-single" height="260"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Barril — Comparar 2 disparos</div>
         <div class="cc-sub">Verde = disparo A seleccionado · Ámbar = disparo B (5° de la lista)</div>
         <canvas id="ch-r-cmp" height="260"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Barril — Intensidad media global</div>
         <div class="cc-sub">Promedio absoluto de todos los disparos válidos por eje</div>
         <canvas id="ch-r-global" height="260"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>
   </div>
@@ -248,21 +263,25 @@
         <div class="cc-lbl">Media de los 3 ejes (g)</div>
         <div class="cc-sub">Línea roja = 1g · referencia gravedad. Accel Z ≈ 1g en reposo plano.</div>
         <canvas id="ch-a-bar" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Dispersión Accel X vs Accel Y</div>
         <div class="cc-sub">Cada punto = media de un disparo · r de Pearson y p-value en leyenda</div>
         <canvas id="ch-a-scatter" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Histograma Accel Z — bins reales</div>
         <div class="cc-sub">Verde = zona ≈ 1g saludable · Rango real medido: −0.7 a 1.4 g</div>
         <canvas id="ch-a-hist" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Accel Z por disparo — evolución temporal</div>
         <div class="cc-sub">Media de Accel Z en cada disparo · línea roja = referencia 1g</div>
         <canvas id="ch-a-line" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>
   </div>
@@ -274,21 +293,25 @@
         <div class="cc-lbl">Media de los 3 ejes (°/s)</div>
         <div class="cc-sub">Barras negativas = rotación opuesta al eje · Hover muestra σ (desv. est.)</div>
         <canvas id="ch-g-bar" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Histograma Gyro X — bins reales (−100 a +100°/s)</div>
         <div class="cc-sub">Rojo = pitch negativo · Ámbar = pitch positivo · Bins ajustados al rango real</div>
         <canvas id="ch-g-hist" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Varianza por eje giroscópico (°/s)²</div>
         <div class="cc-sub">Mayor varianza = mayor inestabilidad/vibración en ese eje de rotación</div>
         <canvas id="ch-g-var" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Gyro X, Y, Z — evolución por disparo</div>
         <div class="cc-sub">Media de cada eje giroscópico por número de disparo · todos los disparos</div>
         <canvas id="ch-g-line" height="230"></canvas>
+        <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>
   </div>

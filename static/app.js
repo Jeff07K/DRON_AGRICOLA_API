@@ -69,7 +69,8 @@ async function fetchAndRender() {
     const res = await fetch(API_URL);
     if (!res.ok) throw new Error(res.status);
     allRecs = await res.json();
-    process();
+    process();                     // ← ya existía
+    updateDisparoSelectors();      // ← NUEVA LÍNEA (añadir esto)
     setStatus('online');
     updateKPIs();
     renderTable();
@@ -339,82 +340,24 @@ function buildTab(name) {
 let radarSelA = null, radarSelB = null;
 
 function buildRadar() {
-  const sample = dIds.slice(0, 20);
-  if (!sample.length) return;
-
-  const maxAx = AXES.map(ax => Math.max(...validRecs.map(r=>Math.abs(r[ax.key])),0.001));
-  const rlbls = AXES.map(ax => ax.label+'\n('+ax.unit+')');
-
-  function rVals(d) {
-    const rs = byD[d];
-    return AXES.map((ax,i) => {
-      const m = rs.reduce((a,r)=>a+Math.abs(r[ax.key]),0)/rs.length;
-      return Math.min(1, m/maxAx[i]);
-    });
+  if(!dIds.length) return;
+  const maxAx = ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'].map(k => Math.max(...validRecs.map(r=>Math.abs(r[k])),0.001));
+  const labels = ['Accel X (g)','Accel Y (g)','Accel Z (g)','Gyro X (°/s)','Gyro Y (°/s)','Gyro Z (°/s)'];
+  function getNormVals(disparo) {
+    const rs = byD[disparo];
+    if(!rs) return new Array(6).fill(0);
+    return ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'].map((k,i) => rs.reduce((a,r)=>a+Math.abs(r[k]),0)/rs.length / maxAx[i]);
   }
-
-  const rOpts = (showLegend) => ({
-    responsive:true, maintainAspectRatio:true,
-    scales:{r:{min:0,max:1,
-      grid:{color:GC}, angleLines:{color:GC}, ticks:{display:false},
-      pointLabels:{font:{size:9,family:"'JetBrains Mono',monospace"},color:'#2a5038'}
-    }},
-    plugins:{
-      legend:{display:showLegend, position:'bottom', labels:{color:'#d4f0dd',padding:16}},
-      tooltip:{callbacks:{label:ctx=>{
-        const ax=AXES[ctx.dataIndex];
-        return ` ${ax.label}: ${(ctx.raw*100).toFixed(0)}% del pico (${ax.unit})`;
-      }}}
-    }
-  });
-
-  // — Single disparo selector —
-  radarSelA = radarSelA || sample[0];
-  const selWrap = document.getElementById('r-sel');
-  if (selWrap) {
-    selWrap.innerHTML = sample.map(d =>
-      `<button class="r-btn ${d===radarSelA?'on':''}" onclick="pickRadarA(${d})">${d}</button>`
-    ).join('');
+  if(currentSingle && byD[currentSingle]) {
+    const data = getNormVals(currentSingle);
+    mk('ch-r-single', { type:'radar', data:{ labels, datasets:[{ label:`Disparo #${currentSingle}`, data, borderColor:'#2e7d32', backgroundColor:'rgba(46,125,50,0.1)', borderWidth:2, pointBackgroundColor:'#2e7d32' }] }, options:{ responsive:true, scales:{ r:{ min:0, max:1, ticks:{display:false} } }, plugins:{ tooltip:{ callbacks:{ label:ctx=>`${labels[ctx.dataIndex]}: ${(ctx.raw*100).toFixed(0)}% del pico` } } } } });
   }
-  mk('ch-r-single',{type:'radar',
-    data:{labels:rlbls, datasets:[{
-      label:'Disparo #'+radarSelA, data:rVals(radarSelA),
-      borderColor:'#00ff6a',borderWidth:2.5,
-      backgroundColor:'rgba(0,255,106,.08)',
-      pointBackgroundColor:'#00ff6a',pointRadius:5,
-    }]},
-    options:rOpts(false)
-  });
-
-  // — Compare —
-  radarSelB = radarSelB || (sample[4]||sample[1]);
-  mk('ch-r-cmp',{type:'radar',
-    data:{labels:rlbls, datasets:[
-      {label:'A: #'+radarSelA, data:rVals(radarSelA),
-       borderColor:'#00ff6a',borderWidth:2.5,backgroundColor:'rgba(0,255,106,.08)',
-       pointBackgroundColor:'#00ff6a',pointRadius:5},
-      {label:'B: #'+radarSelB, data:rVals(radarSelB),
-       borderColor:'#ffb800',borderWidth:2.5,backgroundColor:'rgba(255,184,0,.08)',
-       pointBackgroundColor:'#ffb800',pointRadius:5}
-    ]},
-    options:rOpts(true)
-  });
-
-  // — Global average —
-  const gVals = AXES.map((ax,i)=>{
-    const m = validRecs.reduce((a,r)=>a+Math.abs(r[ax.key]),0)/validRecs.length;
-    return Math.min(1, m/maxAx[i]);
-  });
-  mk('ch-r-global',{type:'radar',
-    data:{labels:rlbls, datasets:[{
-      label:'Intensidad media global',
-      data:gVals,
-      borderColor:'#cc44ff',borderWidth:2.5,
-      backgroundColor:'rgba(204,68,255,.08)',
-      pointBackgroundColor:AXES.map(a=>a.color),pointRadius:6,
-    }]},
-    options:rOpts(false)
-  });
+  if(currentCmpA && currentCmpB && byD[currentCmpA] && byD[currentCmpB]) {
+    const dataA = getNormVals(currentCmpA), dataB = getNormVals(currentCmpB);
+    mk('ch-r-cmp', { type:'radar', data:{ labels, datasets:[ { label:`A: #${currentCmpA}`, data:dataA, borderColor:'#2e7d32', backgroundColor:'rgba(46,125,50,0.05)' }, { label:`B: #${currentCmpB}`, data:dataB, borderColor:'#f57c00', backgroundColor:'rgba(245,124,0,0.05)' } ] }, options:{ responsive:true, scales:{ r:{ min:0, max:1 } } } });
+  }
+  const globalVals = ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'].map((k,i) => validRecs.reduce((a,r)=>a+Math.abs(r[k]),0)/validRecs.length / maxAx[i]);
+  mk('ch-r-global', { type:'radar', data:{ labels, datasets:[{ label:'Intensidad media global', data:globalVals, borderColor:'#7b1fa2', backgroundColor:'rgba(123,31,162,0.1)', pointBackgroundColor:'#7b1fa2' }] }, options:{ responsive:true, scales:{ r:{ min:0, max:1 } } } });
 }
 
 window.pickRadarA = function(d) {
@@ -696,4 +639,38 @@ function erf(x) {
   const t=1/(1+p*x);
   const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
   return sign*y;
+}
+// ---------- SELECTORES DINÁMICOS PARA RADAR ----------
+let currentSingle = null, currentCmpA = null, currentCmpB = null;
+
+function updateDisparoSelectors() {
+  if(!dIds.length) return;
+
+  const containerUnico = document.getElementById('r-sel-unico');
+  const selectA = document.getElementById('cmpA');
+  const selectB = document.getElementById('cmpB');
+
+  if(containerUnico) {
+    containerUnico.innerHTML = `<select id="singleSelect">${dIds.map(d=>`<option value="${d}">Disparo #${d}</option>`).join('')}</select>`;
+    const singleSel = document.getElementById('singleSelect');
+    if(singleSel) {
+      if(!currentSingle && dIds.length) currentSingle = dIds[0];
+      singleSel.value = currentSingle;
+      singleSel.addEventListener('change', (e) => {
+        currentSingle = parseInt(e.target.value);
+        if(builtTabs && builtTabs['radar']) buildRadar();
+      });
+    }
+  }
+
+  if(selectA && selectB) {
+    selectA.innerHTML = `<option value="">Selecciona A</option>` + dIds.map(d=>`<option value="${d}">Disparo #${d}</option>`).join('');
+    selectB.innerHTML = `<option value="">Selecciona B</option>` + dIds.map(d=>`<option value="${d}">Disparo #${d}</option>`).join('');
+    if(!currentCmpA && dIds.length) currentCmpA = dIds[0];
+    if(!currentCmpB && dIds.length>1) currentCmpB = dIds[1];
+    selectA.value = currentCmpA;
+    selectB.value = currentCmpB;
+    selectA.addEventListener('change', (e) => { currentCmpA = parseInt(e.target.value); if(builtTabs && builtTabs['radar']) buildRadar(); });
+    selectB.addEventListener('change', (e) => { currentCmpB = parseInt(e.target.value); if(builtTabs && builtTabs['radar']) buildRadar(); });
+  }
 }
