@@ -642,35 +642,57 @@ function erf(x) {
 }
 // ---------- SELECTORES DINÁMICOS PARA RADAR ----------
 let currentSingle = null, currentCmpA = null, currentCmpB = null;
+let lastDIdsKey = '';   // detecta si cambió la lista de disparos
 
 function updateDisparoSelectors() {
   if(!dIds.length) return;
 
-  const containerUnico = document.getElementById('r-sel-unico');
-  const selectA = document.getElementById('cmpA');
-  const selectB = document.getElementById('cmpB');
+  // Inicializar valores por defecto si aún no están seteados
+  if(!currentSingle) currentSingle = dIds[0];
+  if(!currentCmpA)   currentCmpA   = dIds[0];
+  if(!currentCmpB)   currentCmpB   = dIds.length > 1 ? dIds[1] : dIds[0];
 
-  if(containerUnico) {
-    containerUnico.innerHTML = `<select id="singleSelect">${dIds.map(d=>`<option value="${d}">Disparo #${d}</option>`).join('')}</select>`;
-    const singleSel = document.getElementById('singleSelect');
-    if(singleSel) {
-      if(!currentSingle && dIds.length) currentSingle = dIds[0];
-      singleSel.value = currentSingle;
-      singleSel.addEventListener('change', (e) => {
-        currentSingle = parseInt(e.target.value);
-        if(builtTabs && builtTabs['radar']) buildRadar();
-      });
-    }
-  }
+  // Solo reconstruir el DOM si la lista de disparos cambió (evita listeners duplicados)
+  const newKey = dIds.join(',');
+  if(newKey === lastDIdsKey) return;
+  lastDIdsKey = newKey;
 
-  if(selectA && selectB) {
-    selectA.innerHTML = `<option value="">Selecciona A</option>` + dIds.map(d=>`<option value="${d}">Disparo #${d}</option>`).join('');
-    selectB.innerHTML = `<option value="">Selecciona B</option>` + dIds.map(d=>`<option value="${d}">Disparo #${d}</option>`).join('');
-    if(!currentCmpA && dIds.length) currentCmpA = dIds[0];
-    if(!currentCmpB && dIds.length>1) currentCmpB = dIds[1];
-    selectA.value = currentCmpA;
-    selectB.value = currentCmpB;
-    selectA.addEventListener('change', (e) => { currentCmpA = parseInt(e.target.value); if(builtTabs && builtTabs['radar']) buildRadar(); });
-    selectB.addEventListener('change', (e) => { currentCmpB = parseInt(e.target.value); if(builtTabs && builtTabs['radar']) buildRadar(); });
+  // El contenedor real en el HTML es id="r-sel" (dentro del panel "Disparo único")
+  const container = document.getElementById('r-sel');
+  if(container) {
+    // Construir los tres selectores dentro del mismo contenedor
+    container.innerHTML = `
+      <div class="r-sel-row">
+        <label class="r-sel-lbl">Disparo único:</label>
+        <select id="singleSelect" class="r-sel-select">
+          ${dIds.map(d=>`<option value="${d}"${d===currentSingle?' selected':''}>Disparo #${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="r-sel-row" style="margin-top:6px">
+        <label class="r-sel-lbl">Comparar A:</label>
+        <select id="cmpA" class="r-sel-select">
+          ${dIds.map(d=>`<option value="${d}"${d===currentCmpA?' selected':''}>Disparo #${d}</option>`).join('')}
+        </select>
+        <label class="r-sel-lbl" style="margin-left:10px">B:</label>
+        <select id="cmpB" class="r-sel-select">
+          ${dIds.map(d=>`<option value="${d}"${d===currentCmpB?' selected':''}>Disparo #${d}</option>`).join('')}
+        </select>
+      </div>`;
+
+    document.getElementById('singleSelect')?.addEventListener('change', (e) => {
+      currentSingle = parseInt(e.target.value);
+      builtTabs['radar'] = false;
+      buildRadar();
+    });
+    document.getElementById('cmpA')?.addEventListener('change', (e) => {
+      currentCmpA = parseInt(e.target.value);
+      builtTabs['radar'] = false;
+      buildRadar();
+    });
+    document.getElementById('cmpB')?.addEventListener('change', (e) => {
+      currentCmpB = parseInt(e.target.value);
+      builtTabs['radar'] = false;
+      buildRadar();
+    });
   }
 }
