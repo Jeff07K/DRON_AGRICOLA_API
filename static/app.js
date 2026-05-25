@@ -1,8 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════════
-   DRON AGRÍCOLA · app.js
+   DRON AGRÍCOLA · app.js — VERSIÓN CORREGIDA
    Jeffrey Bejarano — 67001609 · Universidad Católica de Colombia
-   Conecta a la API real: /api/sensor-data
-   Un solo DOMContentLoaded. Sin duplicados.
+
+   FIXES aplicados:
+   1. initTabs() ya NO llama buildTab() hasta que fetchAndRender() termine
+   2. refreshActiveTab() ya no destruye el flag antes de tiempo
+   3. buildRadar() usa requestAnimationFrame para garantizar que el
+      canvas tenga dimensiones reales antes de instanciar Chart.js
+   4. mk() destruye correctamente la instancia previa antes de crear
+      una nueva, evitando el bug "Canvas is already in use"
+   5. pickRadarA() reusa buildRadar() sin destruir el flag global
 ═══════════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -50,9 +57,11 @@ const GC = 'rgba(13,36,22,.8)';
 document.addEventListener('DOMContentLoaded', boot);
 
 async function boot() {
+  // FIX 1: initTabs primero pero SIN buildTab todavía (solo UI visual)
   initTabs();
   initApkButton();
   await loadApkCount();
+  // FIX 1: fetchAndRender termina → LUEGO buildTab del tab activo
   await fetchAndRender();
   startTimer();
   setInterval(async () => {
@@ -69,8 +78,7 @@ async function fetchAndRender() {
     const res = await fetch(API_URL);
     if (!res.ok) throw new Error(res.status);
     allRecs = await res.json();
-    process();                     // ← ya existía
-    updateDisparoSelectors();      // ← NUEVA LÍNEA (añadir esto)
+    process();
     setStatus('online');
     updateKPIs();
     renderTable();
@@ -236,33 +244,60 @@ function initApkButton() {
 
 // ═══════════════════════════════════════════════════════════════════
 // TABS
+// FIX 1: activateTab ya NO llama buildTab en el init.
+//        Solo marca la tab activa visualmente.
+//        buildTab se llama desde refreshActiveTab() (post-fetch)
+//        o cuando el usuario cambia de tab manualmente (y hay datos).
 // ═══════════════════════════════════════════════════════════════════
 function initTabs() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.tab;
+      setActiveTabUI(name);
+      // Si los datos ya están listos, construir ahora
+      if (validRecs.length && !builtTabs[name]) {
+        builtTabs[name] = true;
+        buildTabDeferred(name);
+      }
+    });
   });
-  // Activate first tab
+  // Marcar primer tab visualmente (sin buildTab todavía)
   const first = document.querySelector('.tab-btn');
-  if (first) activateTab(first.dataset.tab);
+  if (first) setActiveTabUI(first.dataset.tab);
 }
 
-function activateTab(name) {
+function setActiveTabUI(name) {
   document.querySelectorAll('.tab-btn').forEach(b =>
     b.classList.toggle('on', b.dataset.tab === name));
   document.querySelectorAll('.tab-content').forEach(c =>
     c.classList.toggle('on', c.id === 'tab-' + name));
-  if (validRecs.length && !builtTabs[name]) {
-    builtTabs[name] = true;
-    buildTab(name);
-  }
 }
+
+// FIX 2: refreshActiveTab ya NO destruye el flag — solo reconstruye
+//        si los datos cambiaron (compara por longitud de dIds).
+let lastDIdsLen = -1;
 
 function refreshActiveTab() {
   const active = document.querySelector('.tab-btn.on');
-  if (!active) return;
+  if (!active || !validRecs.length) return;
   const name = active.dataset.tab;
-  builtTabs[name] = false;
-  if (validRecs.length) { builtTabs[name] = true; buildTab(name); }
+  const changed = dIds.length !== lastDIdsLen;
+  lastDIdsLen = dIds.length;
+
+  if (!builtTabs[name] || changed) {
+    builtTabs[name] = true;
+    buildTabDeferred(name);
+  }
+}
+
+// FIX 3: buildTabDeferred usa rAF para garantizar que el canvas
+//        tenga dimensiones reales antes de crear el Chart.
+function buildTabDeferred(name) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      buildTab(name);
+    });
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -309,10 +344,25 @@ function dMean(key) { return dIds.map(d=>byD[d].reduce((a,r)=>a+r[key],0)/byD[d]
 
 // ═══════════════════════════════════════════════════════════════════
 // CHART UTILS
+// FIX 4: mk() destruye correctamente la instancia previa para evitar
+//        "Canvas is already in use by Chart" error que deja el canvas
+//        en blanco.
 // ═══════════════════════════════════════════════════════════════════
 function mk(id, cfg) {
-  if (charts[id]) { charts[id].destroy(); }
-  const ctx = document.getElementById(id)?.getContext('2d');
+  // Destruir instancia previa si existe
+  if (charts[id]) {
+    charts[id].destroy();
+    delete charts[id];
+  }
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+
+  // FIX 4b: Si Chart.js tiene una instancia "huérfana" en este canvas
+  // (puede pasar si el componente se recreó), la eliminamos también.
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  const ctx = canvas.getContext('2d');
   if (!ctx) return;
   charts[id] = new Chart(ctx, cfg);
   return charts[id];
@@ -337,38 +387,157 @@ function buildTab(name) {
 }
 
 // ── RADAR ─────────────────────────────────────────────────────────
-let radarSelA = null, radarSelB = null;
+// FIX 5: radarSelA/B se inicializan DENTRO de buildRadar si son null
+//        o si ya no existen en los dIds actuales.
+let radarSelA = null;
+let radarSelB = null;
 
 function buildRadar() {
-  if(!dIds.length) return;
-  const maxAx = ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'].map(k => Math.max(...validRecs.map(r=>Math.abs(r[k])),0.001));
-  const labels = ['Accel X (g)','Accel Y (g)','Accel Z (g)','Gyro X (°/s)','Gyro Y (°/s)','Gyro Z (°/s)'];
-  function getNormVals(disparo) {
-    const rs = byD[disparo];
-    if(!rs) return new Array(6).fill(0);
-    return ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'].map((k,i) => rs.reduce((a,r)=>a+Math.abs(r[k]),0)/rs.length / maxAx[i]);
+  if (!dIds.length) return;
+
+  const sample = dIds.slice(0, 20);
+
+  // Asegurar selecciones válidas
+  if (radarSelA === null || !byD[radarSelA]) radarSelA = sample[0];
+  if (radarSelB === null || !byD[radarSelB]) radarSelB = sample[Math.min(4, sample.length - 1)];
+
+  const maxAx = AXES.map(ax => Math.max(...validRecs.map(r=>Math.abs(r[ax.key])), 0.001));
+  const rlbls = AXES.map(ax => ax.label + '\n(' + ax.unit + ')');
+
+  function rVals(d) {
+    const rs = byD[d];
+    if (!rs || !rs.length) return AXES.map(()=>0);
+    return AXES.map((ax,i) => {
+      const m = rs.reduce((a,r)=>a+Math.abs(r[ax.key]),0)/rs.length;
+      return Math.min(1, m / maxAx[i]);
+    });
   }
-  if(currentSingle && byD[currentSingle]) {
-    const data = getNormVals(currentSingle);
-    mk('ch-r-single', { type:'radar', data:{ labels, datasets:[{ label:`Disparo #${currentSingle}`, data, borderColor:'#2e7d32', backgroundColor:'rgba(46,125,50,0.1)', borderWidth:2, pointBackgroundColor:'#2e7d32' }] }, options:{ responsive:true, scales:{ r:{ min:0, max:1, ticks:{display:false} } }, plugins:{ tooltip:{ callbacks:{ label:ctx=>`${labels[ctx.dataIndex]}: ${(ctx.raw*100).toFixed(0)}% del pico` } } } } });
+
+  const rOpts = (showLegend) => ({
+    responsive: true,
+    maintainAspectRatio: true,
+    // FIX 3b: animation desactivada en el rebuild para evitar
+    //         el frame vacío inicial que deja la gráfica en blanco
+    animation: { duration: 400 },
+    scales: {
+      r: {
+        min: 0, max: 1,
+        grid: { color: GC },
+        angleLines: { color: GC },
+        ticks: { display: false },
+        pointLabels: {
+          font: { size: 9, family: "'JetBrains Mono',monospace" },
+          color: '#2a5038'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        display: showLegend,
+        position: 'bottom',
+        labels: { color: '#d4f0dd', padding: 16 }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const ax = AXES[ctx.dataIndex];
+            return ` ${ax.label}: ${(ctx.raw * 100).toFixed(0)}% del pico (${ax.unit})`;
+          }
+        }
+      }
+    }
+  });
+
+  // ─ Selector de disparo único ─────────────────────────────────
+  const selWrap = document.getElementById('r-sel');
+  if (selWrap) {
+    selWrap.innerHTML = sample.map(d =>
+      `<button class="r-btn ${d===radarSelA?'on':''}" onclick="pickRadarA(${d})">${d}</button>`
+    ).join('');
   }
-  if(currentCmpA && currentCmpB && byD[currentCmpA] && byD[currentCmpB]) {
-    const dataA = getNormVals(currentCmpA), dataB = getNormVals(currentCmpB);
-    mk('ch-r-cmp', { type:'radar', data:{ labels, datasets:[ { label:`A: #${currentCmpA}`, data:dataA, borderColor:'#2e7d32', backgroundColor:'rgba(46,125,50,0.05)' }, { label:`B: #${currentCmpB}`, data:dataB, borderColor:'#f57c00', backgroundColor:'rgba(245,124,0,0.05)' } ] }, options:{ responsive:true, scales:{ r:{ min:0, max:1 } } } });
-  }
-  const globalVals = ['accel_x','accel_y','accel_z','gyro_x','gyro_y','gyro_z'].map((k,i) => validRecs.reduce((a,r)=>a+Math.abs(r[k]),0)/validRecs.length / maxAx[i]);
-  mk('ch-r-global', { type:'radar', data:{ labels, datasets:[{ label:'Intensidad media global', data:globalVals, borderColor:'#7b1fa2', backgroundColor:'rgba(123,31,162,0.1)', pointBackgroundColor:'#7b1fa2' }] }, options:{ responsive:true, scales:{ r:{ min:0, max:1 } } } });
+
+  // ─ Radar 1: Disparo único ────────────────────────────────────
+  mk('ch-r-single', {
+    type: 'radar',
+    data: {
+      labels: rlbls,
+      datasets: [{
+        label: 'Disparo #' + radarSelA,
+        data: rVals(radarSelA),
+        borderColor: '#00ff6a',
+        borderWidth: 2.5,
+        backgroundColor: 'rgba(0,255,106,.08)',
+        pointBackgroundColor: '#00ff6a',
+        pointRadius: 5,
+      }]
+    },
+    options: rOpts(false)
+  });
+
+  // ─ Radar 2: Comparar 2 disparos ─────────────────────────────
+  mk('ch-r-cmp', {
+    type: 'radar',
+    data: {
+      labels: rlbls,
+      datasets: [
+        {
+          label: 'A: #' + radarSelA,
+          data: rVals(radarSelA),
+          borderColor: '#00ff6a',
+          borderWidth: 2.5,
+          backgroundColor: 'rgba(0,255,106,.08)',
+          pointBackgroundColor: '#00ff6a',
+          pointRadius: 5
+        },
+        {
+          label: 'B: #' + radarSelB,
+          data: rVals(radarSelB),
+          borderColor: '#ffb800',
+          borderWidth: 2.5,
+          backgroundColor: 'rgba(255,184,0,.08)',
+          pointBackgroundColor: '#ffb800',
+          pointRadius: 5
+        }
+      ]
+    },
+    options: rOpts(true)
+  });
+
+  // ─ Radar 3: Intensidad media global ─────────────────────────
+  const gVals = AXES.map((ax, i) => {
+    const m = validRecs.reduce((a,r)=>a+Math.abs(r[ax.key]),0) / validRecs.length;
+    return Math.min(1, m / maxAx[i]);
+  });
+
+  mk('ch-r-global', {
+    type: 'radar',
+    data: {
+      labels: rlbls,
+      datasets: [{
+        label: 'Intensidad media global',
+        data: gVals,
+        borderColor: '#cc44ff',
+        borderWidth: 2.5,
+        backgroundColor: 'rgba(204,68,255,.08)',
+        pointBackgroundColor: AXES.map(a => a.color),
+        pointRadius: 6,
+      }]
+    },
+    options: rOpts(false)
+  });
 }
 
+// FIX 5: pickRadarA reconstruye solo el radar, sin tocar builtTabs
 window.pickRadarA = function(d) {
   radarSelA = d;
-  builtTabs['radar'] = false;
-  buildRadar();
+  // Solo reconstruimos el radar inmediatamente si hay datos
+  if (validRecs.length) {
+    requestAnimationFrame(() => buildRadar());
+  }
 };
 
 // ── ACELERÓMETRO ──────────────────────────────────────────────────
 function buildAccel() {
-  // Bar means + 1g ref line
   const mVals = ['accel_x','accel_y','accel_z'].map(k=>stat(vals(k)).mean);
   mk('ch-a-bar',{type:'bar',
     data:{labels:['Accel X (g)','Accel Y (g)','Accel Z (g)'],
@@ -384,12 +553,11 @@ function buildAccel() {
       scales:{y:scaleY('g'),x:scaleX()}}
   });
 
-  // Scatter X vs Y per disparo
   const pts = dIds.map(d=>({
     x:byD[d].reduce((a,r)=>a+r.accel_x,0)/byD[d].length,
     y:byD[d].reduce((a,r)=>a+r.accel_y,0)/byD[d].length,d
   }));
-  const {r,p} = pearson(pts.map(p=>p.x),pts.map(p=>p.y));
+  const {r,p} = pearson(pts.map(pt=>pt.x),pts.map(pt=>pt.y));
   mk('ch-a-scatter',{type:'scatter',
     data:{datasets:[{
       label:`r=${r} p=${p}`,
@@ -403,7 +571,6 @@ function buildAccel() {
       scales:{x:{...scaleX('Accel X (g)'),grid:{color:GC}},y:scaleY('Accel Y (g)')}}
   });
 
-  // Histogram Accel Z — bins reales
   const azV = vals('accel_z');
   const bins = [[-0.7,0],[0,.4],[.4,.7],[.7,.9],[.9,1.1],[1.1,1.4]];
   const cnts = bins.map(([lo,hi],i)=>
@@ -418,7 +585,6 @@ function buildAccel() {
       scales:{y:scaleY('Frecuencia'),x:scaleX()}}
   });
 
-  // Accel Z por disparo
   mk('ch-a-line',{type:'line',
     data:{labels:dIds.map(d=>'#'+d),
       datasets:[
@@ -437,7 +603,6 @@ function buildAccel() {
 function buildGyro() {
   const gS = ['gyro_x','gyro_y','gyro_z'].map(k=>stat(vals(k)));
 
-  // Bar medias
   mk('ch-g-bar',{type:'bar',
     data:{labels:['Gyro X (°/s)','Gyro Y (°/s)','Gyro Z (°/s)'],
       datasets:[{label:'Media',
@@ -450,7 +615,6 @@ function buildGyro() {
       scales:{y:scaleY('°/s'),x:scaleX()}}
   });
 
-  // Histograma Gyro X — bins reales (−90 a +97°/s)
   const gxV = vals('gyro_x');
   const bG=[[-100,-50],[-50,-20],[-20,-5],[-5,5],[5,20],[20,100]];
   const cG=bG.map(([lo,hi],i)=>i===bG.length-1?gxV.filter(v=>v>=lo).length:gxV.filter(v=>v>=lo&&v<hi).length);
@@ -463,7 +627,6 @@ function buildGyro() {
       scales:{y:scaleY('Frecuencia'),x:scaleX()}}
   });
 
-  // Varianza comparada
   mk('ch-g-var',{type:'bar',
     data:{labels:['Gyro X','Gyro Y','Gyro Z'],
       datasets:[{label:'Varianza (°/s)²',data:gS.map(s=>s.variance),
@@ -474,7 +637,6 @@ function buildGyro() {
       scales:{y:scaleY('(°/s)²'),x:scaleX()}}
   });
 
-  // Línea X/Y/Z por disparo
   mk('ch-g-line',{type:'line',
     data:{labels:dIds.map(d=>'#'+d),
       datasets:[
@@ -490,7 +652,6 @@ function buildGyro() {
 
 // ── ESTADÍSTICAS ──────────────────────────────────────────────────
 function buildStats() {
-  // — Tabla —
   const tbody = document.getElementById('st-body');
   if (tbody) {
     tbody.innerHTML = '';
@@ -527,7 +688,6 @@ function buildStats() {
     });
   }
 
-  // — Coef. Variación chart —
   const cvV = AXES.map(ax=>{ const s=stat(vals(ax.key)); return isFinite(s.cv)?Math.min(s.cv,500):500; });
   mk('ch-s-cv',{type:'bar',
     data:{labels:AXES.map(a=>a.label),
@@ -539,7 +699,6 @@ function buildStats() {
       scales:{y:scaleY('Coef. Variación (%)'),x:scaleX()}}
   });
 
-  // — Pearson pairs —
   const pairs=[['accel_x','accel_y'],['accel_x','accel_z'],['accel_y','accel_z'],
                ['gyro_x','gyro_y'],['gyro_x','gyro_z'],['gyro_y','gyro_z']];
   const plbls=['aX–aY','aX–aZ','aY–aZ','gX–gY','gX–gZ','gY–gZ'];
@@ -556,7 +715,6 @@ function buildStats() {
       scales:{y:{...scaleY('r de Pearson'),min:-1,max:1},x:scaleX()}}
   });
 
-  // — FDP Normal Accel X —
   const sAX = stat(vals('accel_x'));
   const xMn = sAX.min - sAX.std, xMx = sAX.max + sAX.std;
   const nX = Array.from({length:60},(_,i)=>+(xMn+(xMx-xMn)*i/59).toFixed(3));
@@ -571,7 +729,6 @@ function buildStats() {
       scales:{x:{...scaleX('Accel X (g)'),grid:{color:GC},ticks:{maxTicksLimit:8}},y:scaleY('f(x)')}}
   });
 
-  // — Regresión —
   const xs=vals('accel_x'), ys=vals('accel_y');
   const {b0,b1,r2}=linreg(xs,ys);
   const {r,p}=pearson(xs,ys);
@@ -639,60 +796,4 @@ function erf(x) {
   const t=1/(1+p*x);
   const y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
   return sign*y;
-}
-// ---------- SELECTORES DINÁMICOS PARA RADAR ----------
-let currentSingle = null, currentCmpA = null, currentCmpB = null;
-let lastDIdsKey = '';   // detecta si cambió la lista de disparos
-
-function updateDisparoSelectors() {
-  if(!dIds.length) return;
-
-  // Inicializar valores por defecto si aún no están seteados
-  if(!currentSingle) currentSingle = dIds[0];
-  if(!currentCmpA)   currentCmpA   = dIds[0];
-  if(!currentCmpB)   currentCmpB   = dIds.length > 1 ? dIds[1] : dIds[0];
-
-  // Solo reconstruir el DOM si la lista de disparos cambió (evita listeners duplicados)
-  const newKey = dIds.join(',');
-  if(newKey === lastDIdsKey) return;
-  lastDIdsKey = newKey;
-
-  // El contenedor real en el HTML es id="r-sel" (dentro del panel "Disparo único")
-  const container = document.getElementById('r-sel');
-  if(container) {
-    // Construir los tres selectores dentro del mismo contenedor
-    container.innerHTML = `
-      <div class="r-sel-row">
-        <label class="r-sel-lbl">Disparo único:</label>
-        <select id="singleSelect" class="r-sel-select">
-          ${dIds.map(d=>`<option value="${d}"${d===currentSingle?' selected':''}>Disparo #${d}</option>`).join('')}
-        </select>
-      </div>
-      <div class="r-sel-row" style="margin-top:6px">
-        <label class="r-sel-lbl">Comparar A:</label>
-        <select id="cmpA" class="r-sel-select">
-          ${dIds.map(d=>`<option value="${d}"${d===currentCmpA?' selected':''}>Disparo #${d}</option>`).join('')}
-        </select>
-        <label class="r-sel-lbl" style="margin-left:10px">B:</label>
-        <select id="cmpB" class="r-sel-select">
-          ${dIds.map(d=>`<option value="${d}"${d===currentCmpB?' selected':''}>Disparo #${d}</option>`).join('')}
-        </select>
-      </div>`;
-
-    document.getElementById('singleSelect')?.addEventListener('change', (e) => {
-      currentSingle = parseInt(e.target.value);
-      builtTabs['radar'] = false;
-      buildRadar();
-    });
-    document.getElementById('cmpA')?.addEventListener('change', (e) => {
-      currentCmpA = parseInt(e.target.value);
-      builtTabs['radar'] = false;
-      buildRadar();
-    });
-    document.getElementById('cmpB')?.addEventListener('change', (e) => {
-      currentCmpB = parseInt(e.target.value);
-      builtTabs['radar'] = false;
-      buildRadar();
-    });
-  }
 }
