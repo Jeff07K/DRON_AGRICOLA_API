@@ -1,699 +1,647 @@
 """
-export.py — Dron Agrícola MPU6050
-Jeffrey Bejarano — 67001609 · Universidad Católica de Colombia · 2026-1
+export.py — Genera un archivo Excel con estadísticas y gráficas correctas.
 
-Genera un Excel profesional con:
-  Hoja 1 · Datos          — tabla de datos crudos formateada, colores alternos
-  Hoja 2 · Estadística    — tabla completa + gráfico de barras con fórmulas Excel
-  Hoja 3 · Frecuencias    — histogramas con bins reales + gráficos de columnas
-  Hoja 4 · Correlación    — matriz Pearson coloreada + regresión lineal
-  Hoja 5 · Probabilístico — Normal, TCL, IC 95%, Binomial, Geométrica
-  Hoja 6 · Gráficas       — gráficos de línea de los 6 ejes por disparo
+Hojas:
+  1. Datos       — Datos crudos del sensor
+  2. Estadística — Estadística descriptiva completa (varianza MUESTRAL n-1)
+  3. Frecuencias — Histogramas con bins dinámicos ajustados a los datos reales
+  4. Correlación — Matriz de correlación Pearson entre los 6 ejes
+  5. Probabilístico — Modelo binomial negativa aplicado a los disparos
+  6. Gráficas    — Evolución temporal por eje y por disparo
 """
 
-import io, math
+import io
+import math
 from typing import List
 
 import openpyxl
-from openpyxl.styles import (Font, PatternFill, Alignment, Border, Side,
-                              GradientFill)
-from openpyxl.utils import get_column_letter
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.chart import BarChart, LineChart, ScatterChart, Reference
-from openpyxl.chart.series import DataPoint
-from openpyxl.chart.label import DataLabelList
+from openpyxl.chart.series import SeriesLabel
+from openpyxl.utils import get_column_letter
 
-from models import SensorData
+# ─── Paleta de colores ───────────────────────────────────────────────────────
+C_DARK_BLUE   = "1F4E79"
+C_MED_BLUE    = "2E75B6"
+C_LIGHT_BLUE  = "BDD7EE"
+C_ORANGE      = "C55A11"
+C_YELLOW      = "FFC000"
+C_GREEN_DARK  = "375623"
+C_GREEN_MED   = "70AD47"
+C_GREEN_LIGHT = "E2EFDA"
+C_RED         = "C00000"
+C_GRAY_LIGHT  = "F2F2F2"
+C_GRAY_MED    = "D9D9D9"
+C_WHITE       = "FFFFFF"
 
-# ─── Paleta ───────────────────────────────────────────────────────────────────
-C = {
-    'dark_green':  '1A4731',  # header fondo
-    'mid_green':   '276749',  # sub-header
-    'light_green': 'E8F5E9',  # fila alterna 1
-    'white':       'FFFFFF',  # fila alterna 2
-    'accent_blue': '1565C0',  # valores numéricos destacados
-    'accent_amber':'F57F17',  # advertencias
-    'accent_red':  'B71C1C',  # valores negativos extremos
-    'positive':    '1B5E20',  # texto valor positivo
-    'negative':    'B71C1C',  # texto valor negativo
-    'muted':       '607D8B',  # texto secundario
-    'gold':        'F9A825',  # títulos de sección
-    'pearl':       'F5F5F5',  # fondos neutrales
-    'corr_high':   'C8E6C9',  # correlación fuerte
-    'corr_mid':    'FFF9C4',  # correlación media
-    'corr_low':    'FFCDD2',  # correlación baja/nula
-    'sig':         'E8F5E9',  # p < 0.05
-    'nsig':        'FFCDD2',  # p >= 0.05
-}
+# ─── Estilos reutilizables ───────────────────────────────────────────────────
+THIN = Side(border_style="thin", color="AAAAAA")
+BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 
-THIN  = Side(border_style='thin',   color='BDBDBD')
-THICK = Side(border_style='medium', color='1A4731')
-B_ALL = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
-B_BOT = Border(bottom=THICK)
+def _fill(hex_color: str) -> PatternFill:
+    return PatternFill("solid", fgColor=hex_color)
 
-def fill(hex_color):
-    return PatternFill('solid', fgColor=hex_color)
+def _font(color=C_WHITE, bold=True, size=10, name="Arial") -> Font:
+    return Font(color=color, bold=bold, size=size, name=name)
 
-def font(bold=False, color='000000', size=10, italic=False):
-    return Font(bold=bold, color=color, size=size, italic=italic,
-                name='Calibri')
-
-def align(h='center', v='center', wrap=False):
+def _align(h="center", v="center", wrap=False) -> Alignment:
     return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
 
-def cell(ws, row, col, value='', bold=False, bg=None, fg='000000',
-         size=10, h='left', v='center', wrap=False, italic=False,
-         border=True, num_fmt=None):
-    c = ws.cell(row=row, column=col, value=value)
-    c.font      = font(bold=bold, color=fg, size=size, italic=italic)
-    c.alignment = align(h=h, v=v, wrap=wrap)
-    if bg:  c.fill   = fill(bg)
-    if border: c.border = B_ALL
-    if num_fmt: c.number_format = num_fmt
-    return c
+def _hdr(cell, text, bg=C_DARK_BLUE, fg=C_WHITE, bold=True, size=10):
+    cell.value = text
+    cell.font = _font(fg, bold, size)
+    cell.fill = _fill(bg)
+    cell.alignment = _align(wrap=True)
+    cell.border = BORDER
 
-def hdr(ws, row, col, text, span=1):
-    """Celda de encabezado principal — verde oscuro, texto blanco, bold"""
-    c = cell(ws, row, col, text, bold=True, bg=C['dark_green'],
-             fg='FFFFFF', h='center', size=10)
-    if span > 1:
-        ws.merge_cells(start_row=row, start_column=col,
-                       end_row=row, end_column=col+span-1)
-    return c
+def _cell(cell, value, bold=False, color="000000", bg=None, align="center"):
+    cell.value = value
+    cell.font = _font(color, bold, size=10)
+    if bg:
+        cell.fill = _fill(bg)
+    cell.alignment = _align(align)
+    cell.border = BORDER
 
-def sub_hdr(ws, row, col, text, span=1):
-    """Sub-encabezado — verde medio"""
-    c = cell(ws, row, col, text, bold=True, bg=C['mid_green'],
-             fg='FFFFFF', h='center', size=9)
-    if span > 1:
-        ws.merge_cells(start_row=row, start_column=col,
-                       end_row=row, end_column=col+span-1)
-    return c
-
-def section_title(ws, row, col, text, span=8):
-    """Título de sección — dorado"""
-    c = cell(ws, row, col, text, bold=True, bg=C['dark_green'],
-             fg=C['gold'], h='left', size=12, border=False)
-    ws.merge_cells(start_row=row, start_column=col,
-                   end_row=row, end_column=col+span-1)
-    ws.row_dimensions[row].height = 22
-    return c
-
-def autowidth(ws, min_w=8, max_w=40):
+def _autowidth(ws, min_w=10, max_w=30):
     for col in ws.columns:
-        w = max((len(str(c.value or '')) for c in col), default=8)
-        ws.column_dimensions[get_column_letter(col[0].column)].width = \
-            min(max(w + 3, min_w), max_w)
+        col_letter = get_column_letter(col[0].column)
+        width = max((len(str(c.value or "")) for c in col), default=min_w)
+        ws.column_dimensions[col_letter].width = min(max(width + 2, min_w), max_w)
 
-# ─── Estadísticas ─────────────────────────────────────────────────────────────
-def _stat(values):
+# ─── Estadísticas muestrales (n-1) ──────────────────────────────────────────
+def _stat(values: list) -> dict:
     n = len(values)
-    if n < 1: return {}
-    s  = sorted(values)
-    mu = sum(s) / n
-    va = sum((v-mu)**2 for v in s) / n
-    sd = math.sqrt(va)
-    def pct(p):
-        i = (n-1)*p; lo,hi = int(i), math.ceil(i)
-        return s[lo] if lo==hi else s[lo]+(s[hi]-s[lo])*(i-lo)
-    q1,med,q3 = pct(.25),pct(.5),pct(.75)
-    iqr = q3-q1
-    cv  = sd/abs(mu)*100 if abs(mu)>1e-9 else float('inf')
-    return dict(n=n, mean=round(mu,4), var=round(va,4), std=round(sd,4),
-                min=round(s[0],4), q1=round(q1,4), med=round(med,4),
-                q3=round(q3,4), max=round(s[-1],4), iqr=round(iqr,4),
-                cv=round(cv,2) if math.isfinite(cv) else 9999)
+    if n == 0:
+        return dict(n=0, media=0, varianza=0, desv_est=0,
+                    minimo=0, q1=0, mediana=0, q3=0, maximo=0,
+                    iqr=0, cv=0)
+    media = sum(values) / n
+    # Varianza MUESTRAL (n-1) — corrección de Bessel
+    varianza = sum((v - media) ** 2 for v in values) / max(n - 1, 1)
+    desv_est = math.sqrt(varianza)
+    sv = sorted(values)
 
-def _pearson(xs, ys):
-    n = len(xs)
-    if n < 3: return 0, 1   # necesita al menos 3 puntos
-    mx,my = sum(xs)/n, sum(ys)/n
-    num = sum((x-mx)*(y-my) for x,y in zip(xs,ys))
-    dx  = math.sqrt(sum((x-mx)**2 for x in xs))
-    dy  = math.sqrt(sum((y-my)**2 for y in ys))
-    if dx*dy == 0: return 0, 1
-    r   = max(-1, min(1, num/(dx*dy)))
-    t   = r*math.sqrt(n-2)/math.sqrt(max(1e-10,1-r*r))
-    p   = min(1, math.exp(-0.717*abs(t) - 0.416*t*t))
-    return round(r,4), round(p,4)
+    def percentile(data, p):
+        idx = (len(data) - 1) * p / 100
+        lo, hi = int(idx), min(int(idx) + 1, len(data) - 1)
+        return data[lo] + (data[hi] - data[lo]) * (idx - lo)
 
-def _linreg(xs, ys):
-    n = len(xs)
-    if n < 2: return 0,0,0
-    mx,my = sum(xs)/n, sum(ys)/n
-    b1n = sum((x-mx)*(y-my) for x,y in zip(xs,ys))
-    b1d = sum((x-mx)**2 for x in xs)
-    if b1d == 0: return round(my,4), 0, 0
-    b1  = b1n/b1d; b0 = my-b1*mx
-    sst = sum((y-my)**2 for y in ys)
-    sse = sum((y-(b0+b1*x))**2 for x,y in zip(xs,ys))
-    r2  = 1-sse/sst if sst>0 else 0
-    return round(b0,4), round(b1,4), round(r2,4)
+    q1  = percentile(sv, 25)
+    med = percentile(sv, 50)
+    q3  = percentile(sv, 75)
+    iqr = q3 - q1
+    cv  = abs(desv_est / media * 100) if media != 0 else float("inf")
 
-def _norm_cdf(x, mu, sigma):
-    if sigma == 0: return (0 if x < mu else 1)
-    z = (x-mu)/(sigma*math.sqrt(2))
-    t = 1/(1+0.3275911*abs(z))
-    e = 1-(((((1.061405429*t-1.453152027)*t+1.421413741)*t
-              -0.284496736)*t+0.254829592)*t)*math.exp(-z*z)
-    return 0.5*(1+(e if z>=0 else -e))
+    return dict(
+        n=n,
+        media=round(media, 4),
+        varianza=round(varianza, 4),
+        desv_est=round(desv_est, 4),
+        minimo=round(min(values), 4),
+        q1=round(q1, 4),
+        mediana=round(med, 4),
+        q3=round(q3, 4),
+        maximo=round(max(values), 4),
+        iqr=round(iqr, 4),
+        cv=round(cv, 2),
+    )
 
-def _freq(values, bins):
-    """bins = [(lo,hi), ...]. Último bin incluye el extremo."""
-    counts = []
-    for i,(lo,hi) in enumerate(bins):
-        if i == len(bins)-1:
-            counts.append(sum(1 for v in values if lo<=v<=hi))
-        else:
-            counts.append(sum(1 for v in values if lo<=v<hi))
-    return counts
+# ─── Bins dinámicos basados en los datos reales ──────────────────────────────
+def _make_bins(values: list, n_bins: int = 6):
+    """Calcula intervalos dinámicos ajustados al rango real de los datos."""
+    if not values:
+        return []
+    lo, hi = min(values), max(values)
+    if lo == hi:
+        lo -= 1; hi += 1
+    step = (hi - lo) / n_bins
+    bins = []
+    for i in range(n_bins):
+        b_lo = lo + i * step
+        b_hi = lo + (i + 1) * step
+        freq = sum(1 for v in values if b_lo <= v <= b_hi)
+        bins.append((round(b_lo, 3), round(b_hi, 3), freq))
+    return bins
 
-# ─── MAIN ────────────────────────────────────────────────────────────────────
-def generate_excel(records: List[SensorData]) -> bytes:
+# ─── Correlación de Pearson ──────────────────────────────────────────────────
+def _pearson(x: list, y: list) -> float:
+    n = len(x)
+    if n < 2:
+        return 0.0
+    mx, my = sum(x)/n, sum(y)/n
+    num = sum((x[i]-mx)*(y[i]-my) for i in range(n))
+    den = math.sqrt(sum((v-mx)**2 for v in x) * sum((v-my)**2 for v in y))
+    return round(num/den, 4) if den else 0.0
 
-    # Filtrar ceros (sensor offline)
-    valid = [r for r in records if not (
-        r.accel_x==0 and r.accel_y==0 and r.accel_z==0 and
-        r.gyro_x==0  and r.gyro_y==0  and r.gyro_z==0)]
+# ─── Binomial negativa P(X=k|r,p) ────────────────────────────────────────────
+def _nb_pmf(r: int, k: int, p: float) -> float:
+    if k < r or p <= 0 or p >= 1:
+        return 0.0
+    c = math.comb(k - 1, r - 1)
+    return round(c * (p ** r) * ((1 - p) ** (k - r)), 6)
 
-    # Agrupar por disparo para gráficas
-    by_d = {}
-    for r in valid:
-        by_d.setdefault(r.disparo, []).append(r)
-    d_ids = sorted(by_d.keys())
 
-    AX = ['Accel X','Accel Y','Accel Z','Gyro X','Gyro Y','Gyro Z']
-    UNITS = {'Accel X':'g','Accel Y':'g','Accel Z':'g',
-             'Gyro X':'°/s','Gyro Y':'°/s','Gyro Z':'°/s'}
-    COLORS_AX = ['4472C4','7030A0','70AD47','FF0000','FFC000','FF6600']
-
-    def ax_vals(name):
-        key = name.lower().replace(' ','_')
-        return [getattr(r, key) for r in valid]
-
+# =============================================================================
+# FUNCIÓN PRINCIPAL
+# =============================================================================
+def generate_excel(records) -> bytes:
     wb = openpyxl.Workbook()
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HOJA 1 — DATOS SENSOR
-    # ═══════════════════════════════════════════════════════════════════════
+    # Extraer listas de valores
+    ax = [r.accel_x for r in records]
+    ay = [r.accel_y for r in records]
+    az = [r.accel_z for r in records]
+    gx = [r.gyro_x  for r in records]
+    gy = [r.gyro_y  for r in records]
+    gz = [r.gyro_z  for r in records]
+    disparos = [r.disparo for r in records]
+    n = len(records)
+
+    variables = {
+        "Accel X": (ax, "g"),
+        "Accel Y": (ay, "g"),
+        "Accel Z": (az, "g"),
+        "Gyro X":  (gx, "°/s"),
+        "Gyro Y":  (gy, "°/s"),
+        "Gyro Z":  (gz, "°/s"),
+    }
+
+    # =========================================================================
+    # HOJA 1 — Datos crudos
+    # =========================================================================
     ws1 = wb.active
-    ws1.title = 'Datos'
-    ws1.freeze_panes = 'A3'
+    ws1.title = "Datos"
+    ws1.sheet_view.showGridLines = False
+    ws1.row_dimensions[1].height = 30
+    ws1.row_dimensions[2].height = 20
 
-    # Título
-    section_title(ws1, 1, 1, '  DRON AGRÍCOLA · MPU6050 — Datos del Sensor', span=9)
+    ws1["A1"] = f"DATOS CRUDOS DEL SENSOR MPU6050 — n = {n} registros"
+    ws1["A1"].font = _font(C_DARK_BLUE, True, 12)
+    ws1["A1"].alignment = _align("left")
+    ws1.merge_cells("A1:I1")
 
-    # Headers
-    hdrs = ['N°','Timestamp','Disparo','Accel X (g)','Accel Y (g)',
-            'Accel Z (g)','Gyro X (°/s)','Gyro Y (°/s)','Gyro Z (°/s)']
-    for ci, h in enumerate(hdrs, 1):
-        hdr(ws1, 2, ci, h)
+    headers = ["N°", "Timestamp", "Disparo", "Accel X (g)", "Accel Y (g)",
+               "Accel Z (g)", "Gyro X (°/s)", "Gyro Y (°/s)", "Gyro Z (°/s)"]
+    for c, h in enumerate(headers, 1):
+        _hdr(ws1.cell(3, c), h)
 
-    # Data rows
-    for ri, r in enumerate(valid, 3):
-        bg = C['light_green'] if ri % 2 == 0 else C['white']
-        vals_row = [ri-2, str(r.timestamp)[:19], r.disparo,
-                    r.accel_x, r.accel_y, r.accel_z,
-                    r.gyro_x,  r.gyro_y,  r.gyro_z]
-        for ci, v in enumerate(vals_row, 1):
-            fg = '000000'
-            if ci == 3: fg = C['accent_blue']  # disparo
-            if ci >= 4:
-                fg = C['positive'] if isinstance(v,(int,float)) and v>=0 \
-                     else C['negative']
-            nf = '0.0000' if ci >= 4 else None
-            cell(ws1, ri, ci, v, bg=bg, fg=fg, h='center',
-                 num_fmt=nf)
+    for ri, rec in enumerate(records, 4):
+        bg = C_GRAY_LIGHT if (ri % 2 == 0) else C_WHITE
+        row_vals = [ri - 3, str(rec.timestamp)[:19], rec.disparo,
+                    rec.accel_x, rec.accel_y, rec.accel_z,
+                    rec.gyro_x,  rec.gyro_y,  rec.gyro_z]
+        for ci, val in enumerate(row_vals, 1):
+            c = ws1.cell(ri, ci)
+            fmt = "0.0000" if isinstance(val, float) else None
+            _cell(c, val, bg=bg)
+            if fmt:
+                c.number_format = fmt
 
-    # Totals row
-    n_data = len(valid)
-    last_r = 2 + n_data
-    cell(ws1, last_r+1, 1, f'Total: {n_data} registros válidos',
-         bold=True, bg=C['dark_green'], fg='FFFFFF', h='center')
-    ws1.merge_cells(f'A{last_r+1}:I{last_r+1}')
-    # Apply fill/font to merged cells
-    for col in range(2, 10):
-        c2 = ws1.cell(row=last_r+1, column=col)
-        c2.fill = fill(C['dark_green'])
-        c2.border = B_ALL
+    _autowidth(ws1)
 
-    ws1.column_dimensions['A'].width = 5
-    ws1.column_dimensions['B'].width = 22
-    ws1.column_dimensions['C'].width = 10
-    for col in 'DEFGHI':
-        ws1.column_dimensions[col].width = 14
+    # =========================================================================
+    # HOJA 2 — Estadística descriptiva
+    # =========================================================================
+    ws2 = wb.create_sheet("Estadística")
+    ws2.sheet_view.showGridLines = False
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HOJA 2 — ESTADÍSTICA DESCRIPTIVA
-    # ═══════════════════════════════════════════════════════════════════════
-    ws2 = wb.create_sheet('Estadística')
+    ws2["A1"] = f"ESTADÍSTICA DESCRIPTIVA — n = {n} registros válidos"
+    ws2["A1"].font = _font(C_DARK_BLUE, True, 12)
+    ws2.merge_cells("A1:L1")
+    ws2["A1"].alignment = _align("left")
 
-    section_title(ws2, 1, 1,
-        f'  ESTADÍSTICA DESCRIPTIVA — n = {len(valid)} registros válidos', span=14)
+    # Nota metodológica
+    ws2["A2"] = ("Nota: CV = Desv.Est. / |Media| × 100  ·  IQR = Q3 − Q1  "
+                 "·  ✓ CV<30% = estable  ·  △ 30–100%  ·  ▲ 100–300%  ·  ✗ >300%")
+    ws2["A2"].font = Font(italic=True, size=9, color="666666", name="Arial")
+    ws2.merge_cells("A2:L2")
 
-    # Advertencia si n < 10
-    if len(valid) < 10:
-        c2 = cell(ws2, 2, 1,
-            f'⚠ ADVERTENCIA: Solo {len(valid)} registros. '
-            'Agrega más disparos para resultados estadísticos confiables. '
-            'Se necesitan al menos 30 registros (TCL).',
-            bold=True, bg='FFF9C4', fg=C['accent_amber'], wrap=True,
-            h='left', border=False)
-        ws2.merge_cells('A2:N2')
-        ws2.row_dimensions[2].height = 28
-        start_row = 4
-    else:
-        start_row = 3
+    stat_hdrs = ["Variable", "Unidad", "N", "Media", "Varianza", "Desv. Est.",
+                 "Mínimo", "Q1 (25%)", "Mediana", "Q3 (75%)", "Máximo", "IQR",
+                 "CV (%)", "Estabilidad"]
+    for c, h in enumerate(stat_hdrs, 1):
+        _hdr(ws2.cell(3, c), h, bg=C_MED_BLUE)
 
-    stat_cols = ['Variable','Unidad','N','Media','Varianza','Desv. Est.',
-                 'Mínimo','Q1 (25%)','Mediana','Q3 (75%)','Máximo',
-                 'IQR','CV (%)','Estabilidad']
-    for ci, h in enumerate(stat_cols, 1):
-        hdr(ws2, start_row, ci, h)
+    units = {"Accel X": "g", "Accel Y": "g", "Accel Z": "g",
+             "Gyro X": "°/s", "Gyro Y": "°/s", "Gyro Z": "°/s"}
 
-    for ri, name in enumerate(AX, start_row+1):
-        vals = ax_vals(name)
-        s    = _stat(vals)
-        bg   = C['light_green'] if ri % 2 == 0 else C['white']
-        cv   = s.get('cv', 9999)
-        if   cv < 30:   stab = '✓ Estable';    sfg = C['positive']
-        elif cv < 100:  stab = '▲ Moderada';   sfg = C['accent_amber']
-        elif cv < 300:  stab = '⚠ Alta';       sfg = C['accent_red']
-        else:           stab = '✕ Muy alta';   sfg = C['accent_red']
-        cv_txt = f'{cv:.2f}%' if cv < 9999 else '∞'
+    for ri, (name, (vals, unit)) in enumerate(variables.items(), 4):
+        s = _stat(vals)
+        bg = C_GRAY_LIGHT if ri % 2 == 0 else C_WHITE
 
-        row_vals = [name, UNITS[name], s.get('n',0),
-                    s.get('mean',0), s.get('var',0), s.get('std',0),
-                    s.get('min',0), s.get('q1',0), s.get('med',0),
-                    s.get('q3',0), s.get('max',0), s.get('iqr',0),
-                    cv_txt, stab]
+        # Estabilidad basada en CV
+        cv = s["cv"]
+        if cv < 30:
+            stab_txt, stab_bg, stab_fg = "✓ Estable", C_GREEN_LIGHT, C_GREEN_DARK
+        elif cv < 100:
+            stab_txt, stab_bg, stab_fg = "△ Moderada", "FFF2CC", "7F6000"
+        elif cv < 300:
+            stab_txt, stab_bg, stab_fg = "▲ Alta", "FCE4D6", C_ORANGE
+        else:
+            stab_txt, stab_bg, stab_fg = "✗ Muy alta", "FFE6E6", C_RED
 
-        for ci, v in enumerate(row_vals, 1):
-            fg = sfg if ci == 14 else \
-                 (COLORS_AX[ri-start_row-1] if ci == 1 else '000000')
-            bold = ci in (1, 4, 14)
-            nf   = '0.0000' if ci in range(4,13) else None
-            cell(ws2, ri, ci, v, bold=bold, bg=bg, fg=fg,
-                 h='center', num_fmt=nf)
+        row = [name, unit, s["n"], s["media"], s["varianza"], s["desv_est"],
+               s["minimo"], s["q1"], s["mediana"], s["q3"], s["maximo"],
+               s["iqr"], s["cv"], stab_txt]
 
-    # Gráfico: Media de acelerómetro
-    chart_a = BarChart()
-    chart_a.type = 'col'; chart_a.title = 'Media Acelerómetro (g)'
-    chart_a.y_axis.title = 'g'; chart_a.shape = 4
-    data_r   = Reference(ws2, min_col=4, min_row=start_row,
-                         max_row=start_row+3)
-    labels_r = Reference(ws2, min_col=1, min_row=start_row+1,
-                         max_row=start_row+3)
-    chart_a.add_data(data_r, titles_from_data=True)
-    chart_a.set_categories(labels_r)
-    chart_a.width = 14; chart_a.height = 10
-    ws2.add_chart(chart_a, 'P3')
+        for ci, val in enumerate(row, 1):
+            c = ws2.cell(ri, ci)
+            _cell(c, val, bg=bg)
+            if ci == 1:
+                c.font = _font("000000", True, 10)
+            if ci >= 4 and isinstance(val, float):
+                c.number_format = "0.0000"
+            if ci == 14:  # Estabilidad
+                c.fill = _fill(stab_bg)
+                c.font = _font(stab_fg, True, 10)
 
-    # Gráfico: Media giroscopio
-    chart_g = BarChart()
-    chart_g.type = 'col'; chart_g.title = 'Media Giroscopio (°/s)'
-    chart_g.y_axis.title = '°/s'; chart_g.shape = 4
-    # Gyro rows: header at start_row, data at start_row+4 to start_row+6
-    data_g   = Reference(ws2, min_col=4, min_row=start_row,
-                         max_row=start_row+6)
-    labels_g = Reference(ws2, min_col=1, min_row=start_row+4,
-                         max_row=start_row+6)
-    chart_g.add_data(data_g, titles_from_data=True)
-    chart_g.set_categories(labels_g)
-    chart_g.width = 14; chart_g.height = 10
-    ws2.add_chart(chart_g, 'P18')
+    _autowidth(ws2)
 
-    # Nota
-    note_row = start_row + 8
-    cell(ws2, note_row, 1,
-         'Nota: CV = Desv.Est / |Media| × 100  ·  IQR = Q3 − Q1  '
-         '·  ✓ CV<30% = estable  ·  ▲ 30–100%  ·  ⚠ 100–300%  ·  ✕ >300%',
-         italic=True, fg=C['muted'], h='left', border=False, wrap=True)
-    ws2.merge_cells(f'A{note_row}:N{note_row}')
+    # --- Gráfico: Media Acelerómetro (columna vertical) ----------------------
+    chart_accel = BarChart()
+    chart_accel.type = "col"          # ← VERTICAL (columnas), no horizontal
+    chart_accel.grouping = "clustered"
+    chart_accel.title = "Media Acelerómetro (g)"
+    chart_accel.y_axis.title = "Valor (g)"
+    chart_accel.x_axis.title = "Eje"
+    chart_accel.style = 10
+    chart_accel.width = 14
+    chart_accel.height = 10
 
-    autowidth(ws2)
+    # Datos: filas 4,5,6 (Accel X,Y,Z) columna 4 (Media)
+    data_ref = Reference(ws2, min_col=4, max_col=4, min_row=3, max_row=6)
+    cats_ref = Reference(ws2, min_col=1, max_col=1, min_row=4, max_row=6)
+    chart_accel.add_data(data_ref, titles_from_data=True)
+    chart_accel.set_categories(cats_ref)
+    ws2.add_chart(chart_accel, "P3")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HOJA 3 — DISTRIBUCIÓN DE FRECUENCIAS
-    # ═══════════════════════════════════════════════════════════════════════
-    ws3 = wb.create_sheet('Frecuencias')
-    section_title(ws3, 1, 1,
-        f'  DISTRIBUCIÓN DE FRECUENCIAS — bins ajustados al rango real', span=12)
+    # --- Gráfico: Media Giroscopio (columna vertical) ------------------------
+    chart_gyro = BarChart()
+    chart_gyro.type = "col"
+    chart_gyro.grouping = "clustered"
+    chart_gyro.title = "Media Giroscopio (°/s)"
+    chart_gyro.y_axis.title = "Valor (°/s)"
+    chart_gyro.x_axis.title = "Eje"
+    chart_gyro.style = 10
+    chart_gyro.width = 14
+    chart_gyro.height = 10
 
-    if len(valid) < 3:
-        cell(ws3, 2, 1,
-             f'⚠ Solo {len(valid)} registros — histogramas no representativos. '
-             'Genera más disparos para distribuciones significativas.',
-             bold=True, bg='FFF9C4', fg=C['accent_amber'], wrap=True,
-             h='left', border=False)
-        ws3.merge_cells('A2:L2')
-        ws3.row_dimensions[2].height = 28
+    data_ref2 = Reference(ws2, min_col=4, max_col=4, min_row=3, max_row=9)
+    # Solo filas 7,8,9 (Gyro X,Y,Z)
+    data_ref2 = Reference(ws2, min_col=4, max_col=4, min_row=6, max_row=9)
+    cats_ref2 = Reference(ws2, min_col=1, max_col=1, min_row=7, max_row=9)
+    chart_gyro.add_data(data_ref2, titles_from_data=False)
+    chart_gyro.set_categories(cats_ref2)
+    ws2.add_chart(chart_gyro, "P20")
 
-    BINS = {
-        'Accel X': [(-0.9,-0.6),(-0.6,-0.3),(-0.3,0.0),(0.0,0.3),(0.3,0.6),(0.6,0.9)],
-        'Accel Y': [(-1.0,-0.6),(-0.6,-0.3),(-0.3,0.0),(0.0,0.3),(0.3,0.6),(0.6,1.0)],
-        'Accel Z': [(-0.7,0.0),(0.0,0.4),(0.4,0.7),(0.7,0.9),(0.9,1.1),(1.1,1.4)],
-        'Gyro X':  [(-100,-50),(-50,-20),(-20,-5),(-5,5),(5,20),(20,100)],
-        'Gyro Y':  [(-40,-20),(-20,-5),(-5,5),(5,20),(20,40),(40,72)],
-        'Gyro Z':  [(-55,-20),(-20,-5),(-5,5),(5,20),(20,50),(50,110)],
-    }
-    HEALTHY = {  # bins que representan operación normal
-        'Accel Z': [(0.9,1.1)],
-        'Gyro X':  [(-20,-5),(-5,5)],
-    }
+    # =========================================================================
+    # HOJA 3 — Frecuencias con bins DINÁMICOS
+    # =========================================================================
+    ws3 = wb.create_sheet("Frecuencias")
+    ws3.sheet_view.showGridLines = False
 
-    col_start_map = [1, 5, 9]   # columnas de inicio para las 3 primeras variables
-    for group_start_row, group in enumerate([[('Accel X',0),('Accel Y',4),('Accel Z',8)],
-                                              [('Gyro X',0),('Gyro Y',4),('Gyro Z',8)]]):
-        base_row = 4 + group_start_row * 11
-        for name, col_off in group:
-            col = col_off + 1
-            vals = ax_vals(name)
-            bins = BINS[name]
-            cnts = _freq(vals, bins)
-            total = sum(cnts) or 1
+    ws3["A1"] = "DISTRIBUCIÓN DE FRECUENCIAS — bins ajustados al rango real"
+    ws3["A1"].font = _font(C_WHITE, True, 12)
+    ws3["A1"].fill = _fill(C_GREEN_DARK)
+    ws3.merge_cells("A1:R1")
+    ws3["A1"].alignment = _align("left")
 
-            # Variable title
-            sub_hdr(ws3, base_row, col,
-                    f'{name} ({UNITS[name]})', span=3)
+    # Posiciones de columna para cada variable (3 accel + 3 gyro)
+    var_list = [
+        ("Accel X (g)", ax),
+        ("Accel Y (g)", ay),
+        ("Accel Z (g)", az),
+        ("Gyro X (°/s)", gx),
+        ("Gyro Y (°/s)", gy),
+        ("Gyro Z (°/s)", gz),
+    ]
 
-            # Column headers
-            for ci, h in enumerate(['Intervalo','Frec. Abs.','Frec. Rel.%'], col):
-                hdr(ws3, base_row+1, ci, h)
+    col_starts = [1, 4, 7, 10, 13, 16]  # columnas A, D, G, J, M, P
+    chart_positions = ["A14", "D14", "G14", "J14", "M14", "P14"]
+    freq_row_start = 3
 
-            for bi, ((lo,hi), cnt) in enumerate(zip(bins, cnts)):
-                r = base_row + 2 + bi
-                bg = C['light_green'] if bi%2==0 else C['white']
-                # Verde especial para bins "saludables"
-                is_healthy = name in HEALTHY and (lo,hi) in HEALTHY[name]
-                if is_healthy: bg = 'C8E6C9'
+    for idx, ((vname, vvals), col_s, chart_pos) in enumerate(
+            zip(var_list, col_starts, chart_positions)):
 
-                lbl = f'{lo} a {hi}'
-                pct = round(cnt/total*100, 1)
-                cell(ws3, r, col,   lbl, bg=bg, h='center')
-                cell(ws3, r, col+1, cnt, bg=bg, h='center',
-                     fg=C['accent_blue'] if cnt>0 else C['muted'])
-                cell(ws3, r, col+2, pct, bg=bg, h='center',
-                     num_fmt='0.0"%"')
+        # Título de variable
+        title_cell = ws3.cell(2, col_s)
+        title_cell.value = vname
+        _hdr(title_cell, vname, bg=C_MED_BLUE if idx < 3 else C_ORANGE)
+        ws3.merge_cells(
+            start_row=2, start_column=col_s,
+            end_row=2, end_column=col_s + 2
+        )
 
-            # Mini gráfico de barras para cada variable
-            bar = BarChart()
-            bar.type  = 'col'
-            bar.title = f'Histograma {name} ({UNITS[name]})'
-            bar.y_axis.title = 'Frecuencia'
-            bar.x_axis.title = f'Intervalo ({UNITS[name]})'
-            bar.shape = 4; bar.width = 12; bar.height = 9
-            data_ref  = Reference(ws3, min_col=col+1,
-                                  min_row=base_row+1,
-                                  max_row=base_row+1+len(bins))
-            label_ref = Reference(ws3, min_col=col,
-                                  min_row=base_row+2,
-                                  max_row=base_row+1+len(bins))
-            bar.add_data(data_ref, titles_from_data=True)
-            bar.set_categories(label_ref)
-            # Posicionar gráfico debajo de la tabla
-            chart_col = get_column_letter(col)
-            chart_row = base_row + 2 + len(bins) + 1
-            ws3.add_chart(bar, f'{chart_col}{chart_row}')
+        # Cabeceras
+        _hdr(ws3.cell(freq_row_start, col_s),     "Intervalo", bg=C_DARK_BLUE)
+        _hdr(ws3.cell(freq_row_start, col_s + 1), "Frec. Abs.", bg=C_DARK_BLUE)
+        _hdr(ws3.cell(freq_row_start, col_s + 2), "Frec. Rel.%", bg=C_DARK_BLUE)
 
-    autowidth(ws3)
+        # Bins dinámicos
+        bins = _make_bins(vvals, n_bins=6)
+        total_freq = sum(b[2] for b in bins)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HOJA 4 — CORRELACIÓN Y REGRESIÓN
-    # ═══════════════════════════════════════════════════════════════════════
-    ws4 = wb.create_sheet('Correlación')
-    section_title(ws4, 1, 1,
-        '  CORRELACIÓN DE PEARSON + REGRESIÓN LINEAL', span=14)
+        for bi, (b_lo, b_hi, freq) in enumerate(bins):
+            row = freq_row_start + 1 + bi
+            bg = C_GRAY_LIGHT if bi % 2 == 0 else C_WHITE
+            rel = round(freq / total_freq * 100, 1) if total_freq else 0
 
-    if len(valid) < 3:
-        cell(ws4, 2, 1,
-             f'⚠ Solo {len(valid)} registros — se necesitan ≥ 3 para calcular '
-             'correlación. Todos los valores serán 0. Genera más disparos.',
-             bold=True, bg='FFF9C4', fg=C['accent_amber'], wrap=True,
-             h='left', border=False)
-        ws4.merge_cells('A2:N2')
-        ws4.row_dimensions[2].height = 28
-        sr = 4
-    else:
-        sr = 3
+            label_cell = ws3.cell(row, col_s)
+            label_cell.value = f"{b_lo} a {b_hi}"
+            label_cell.font = _font("000000", False, 10)
+            label_cell.border = BORDER
+            label_cell.fill = _fill(bg)
+            label_cell.alignment = _align("center")
 
-    # ── Matriz r de Pearson ──
-    sub_hdr(ws4, sr, 1, 'Matriz r (Pearson)', span=7)
-    for ci, name in enumerate(AX, 2):
-        hdr(ws4, sr+1, ci, name)
-    for ri, name in enumerate(AX, sr+2):
-        hdr(ws4, ri, 1, name)
+            freq_cell = ws3.cell(row, col_s + 1)
+            freq_cell.value = freq
+            freq_cell.font = _font(C_MED_BLUE if freq > 0 else "AAAAAA", freq > 0, 10)
+            freq_cell.border = BORDER
+            freq_cell.fill = _fill(bg)
+            freq_cell.alignment = _align("center")
 
-    for ri, na in enumerate(AX, sr+2):
-        for ci, nb in enumerate(AX, 2):
-            r, p = _pearson(ax_vals(na), ax_vals(nb))
-            if na == nb:
-                bg = 'D5E8D4'  # diagonal
-            elif abs(r) > 0.7:
-                bg = C['corr_high']
-            elif abs(r) > 0.4:
-                bg = C['corr_mid']
+            rel_cell = ws3.cell(row, col_s + 2)
+            rel_cell.value = rel
+            rel_cell.number_format = '0.0"%"'
+            rel_cell.font = _font("000000", False, 10)
+            rel_cell.border = BORDER
+            rel_cell.fill = _fill(bg)
+            rel_cell.alignment = _align("center")
+
+        # --- Histograma de COLUMNAS (vertical) para esta variable -----------
+        hist = BarChart()
+        hist.type = "col"          # ← COLUMNA VERTICAL, no bar horizontal
+        hist.grouping = "clustered"
+        hist.title = f"Histograma {vname}"
+        hist.y_axis.title = "Frecuencia"
+        hist.x_axis.title = "Intervalo"
+        hist.style = 10
+        hist.width = 12
+        hist.height = 10
+
+        data_r = Reference(ws3,
+                           min_col=col_s + 1, max_col=col_s + 1,
+                           min_row=freq_row_start,
+                           max_row=freq_row_start + len(bins))
+        cats_r = Reference(ws3,
+                           min_col=col_s, max_col=col_s,
+                           min_row=freq_row_start + 1,
+                           max_row=freq_row_start + len(bins))
+        hist.add_data(data_r, titles_from_data=True)
+        hist.set_categories(cats_r)
+        ws3.add_chart(hist, chart_pos)
+
+    _autowidth(ws3, min_w=8, max_w=18)
+
+    # =========================================================================
+    # HOJA 4 — Correlación
+    # =========================================================================
+    ws4 = wb.create_sheet("Correlación")
+    ws4.sheet_view.showGridLines = False
+
+    ws4["A1"] = "MATRIZ DE CORRELACIÓN PEARSON — 6 ejes del MPU6050"
+    ws4["A1"].font = _font(C_DARK_BLUE, True, 12)
+    ws4.merge_cells("A1:H1")
+    ws4["A1"].alignment = _align("left")
+
+    var_names = list(variables.keys())
+    var_vals  = [v for v, _ in variables.values()]
+
+    # Cabeceras
+    for ci, name in enumerate(var_names, 2):
+        _hdr(ws4.cell(2, ci), name, bg=C_DARK_BLUE)
+    for ri, name in enumerate(var_names, 3):
+        _hdr(ws4.cell(ri, 1), name, bg=C_DARK_BLUE)
+
+    # Valores de correlación con semáforo de color
+    for ri, vi in enumerate(var_vals):
+        for ci, vj in enumerate(var_vals):
+            r = _pearson(vi, vj)
+            cell = ws4.cell(ri + 3, ci + 2)
+            cell.value = r
+            cell.number_format = "0.0000"
+            cell.border = BORDER
+            cell.alignment = _align("center")
+            cell.font = _font("000000", abs(r) >= 0.7, 10)
+            # Color: verde fuerte = correlación alta, blanco = baja
+            abs_r = abs(r)
+            if ri == ci:  # diagonal
+                cell.fill = _fill(C_DARK_BLUE)
+                cell.font = _font(C_WHITE, True, 10)
+            elif abs_r >= 0.8:
+                cell.fill = _fill(C_GREEN_LIGHT)
+            elif abs_r >= 0.5:
+                cell.fill = _fill("FFF2CC")
+            elif abs_r >= 0.3:
+                cell.fill = _fill(C_GRAY_LIGHT)
             else:
-                bg = C['corr_low']
-            bold = na == nb
-            cell(ws4, ri, ci, r if na!=nb else 1.0,
-                 bold=bold, bg=bg, h='center', num_fmt='0.0000')
+                cell.fill = _fill(C_WHITE)
 
-    # ── Matriz p-values ──
-    sub_hdr(ws4, sr, 9, 'Matriz p-value', span=6)
-    for ci, name in enumerate(AX, 9):
-        hdr(ws4, sr+1, ci, name)
-    for ri, name in enumerate(AX, sr+2):
-        hdr(ws4, ri, 9, name)
+    ws4["A11"] = "Interpretación: |r| ≥ 0.8 = correlación fuerte (verde) · 0.5–0.8 = moderada (amarillo) · <0.3 = débil (blanco)"
+    ws4["A11"].font = Font(italic=True, size=9, color="666666", name="Arial")
+    ws4.merge_cells("A11:H11")
 
-    for ri, na in enumerate(AX, sr+2):
-        for ci, nb in enumerate(AX, 9):
-            r, p = _pearson(ax_vals(na), ax_vals(nb))
-            if na == nb:
-                bg='D5E8D4'; val=0.0
-            else:
-                bg = C['sig'] if p < 0.05 else C['nsig']
-                val = p
-            cell(ws4, ri, ci, val, bg=bg, h='center', num_fmt='0.0000')
+    _autowidth(ws4)
 
-    # Leyenda
-    ley_row = sr + 9
-    for col, (bg, txt) in enumerate([
-        ('D5E8D4','Diagonal — r = 1 (variable consigo misma)'),
-        (C['corr_high'],'|r| > 0.7 — Correlación fuerte'),
-        (C['corr_mid'], '|r| > 0.4 — Correlación moderada'),
-        (C['corr_low'], '|r| ≤ 0.4 — Correlación débil / independiente'),
-        (C['sig'],      'p < 0.05 — Estadísticamente significativo'),
-        (C['nsig'],     'p ≥ 0.05 — No significativo'),
-    ], 1):
-        cell(ws4, ley_row, col, txt, bg=bg, h='left',
-             italic=True, fg=C['muted'], size=9)
+    # =========================================================================
+    # HOJA 5 — Probabilístico (Binomial Negativa)
+    # =========================================================================
+    ws5 = wb.create_sheet("Probabilístico")
+    ws5.sheet_view.showGridLines = False
 
-    # ── Regresión lineal ──
-    reg_row = ley_row + 2
-    section_title(ws4, reg_row, 1,
-        '  REGRESIÓN LINEAL — Ŷ = B0 + B1·X', span=8)
-    reg_hdrs = ['Variable X','Variable Y','B0 (intercepto)',
-                'B1 (pendiente)','R²','r (Pearson)','p-value','Interpretación']
-    for ci, h in enumerate(reg_hdrs, 1):
-        hdr(ws4, reg_row+1, ci, h)
+    ws5["A1"] = "MODELO PROBABILÍSTICO — Distribución Binomial Negativa"
+    ws5["A1"].font = _font(C_DARK_BLUE, True, 12)
+    ws5.merge_cells("A1:J1")
+    ws5["A1"].alignment = _align("left")
 
-    pairs = [('Accel X','Accel Y'),('Gyro X','Gyro Z'),('Accel Z','Gyro X')]
-    for ri, (xa, ya) in enumerate(pairs, reg_row+2):
-        b0, b1, r2 = _linreg(ax_vals(xa), ax_vals(ya))
-        r, p       = _pearson(ax_vals(xa), ax_vals(ya))
-        bg = C['light_green'] if ri%2==0 else C['white']
-        if   r2 > 0.7: interp = f'Fuerte: {r2*100:.1f}% de {ya} explicado por {xa}'
-        elif r2 > 0.3: interp = f'Moderada: {r2*100:.1f}% explicado'
-        else:          interp = f'Débil: {r2*100:.1f}% — ejes mayormente independientes'
-        for ci, v in enumerate([xa,ya,b0,b1,r2,r,p,interp], 1):
-            nf = '0.0000' if ci in (3,4,5,6,7) else None
-            cell(ws4, ri, ci, v, bg=bg, h='center', num_fmt=nf,
-                 wrap=(ci==8))
+    # Definición del experimento
+    ws5["A3"] = "Definición del experimento"
+    ws5["A3"].font = _font("000000", True, 11)
 
-    autowidth(ws4)
+    context = [
+        ("Sensor", "MPU6050 — Acelerómetro + Giroscopio"),
+        ("Evento de éxito (X=1)", "Gyro Z < 10 °/s  →  disparo estable"),
+        ("Evento de fallo (X=0)", "Gyro Z ≥ 10 °/s  →  disparo inestable"),
+        ("Estimación de p", f"Basada en {n} disparos registrados"),
+    ]
+    for ri, (k, v) in enumerate(context, 4):
+        ws5.cell(ri, 1).value = k
+        ws5.cell(ri, 1).font = _font("000000", True, 10)
+        ws5.cell(ri, 1).border = BORDER
+        ws5.cell(ri, 1).fill = _fill(C_GRAY_LIGHT)
+        ws5.cell(ri, 1).alignment = _align("left")
+        ws5.cell(ri, 2).value = v
+        ws5.cell(ri, 2).font = _font("000000", False, 10)
+        ws5.cell(ri, 2).border = BORDER
+        ws5.cell(ri, 2).alignment = _align("left")
+        ws5.merge_cells(start_row=ri, start_column=2, end_row=ri, end_column=6)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HOJA 5 — ANÁLISIS PROBABILÍSTICO
-    # ═══════════════════════════════════════════════════════════════════════
-    ws5 = wb.create_sheet('Probabilístico')
-    section_title(ws5, 1, 1,
-        '  ANÁLISIS PROBABILÍSTICO — Normal, TCL, IC 95%, Binomial, Geométrica',
-        span=9)
+    # Calcular p real de los datos
+    umbral_gz = 10.0
+    exitos_reales = sum(1 for v in gz if abs(v) < umbral_gz)
+    p_real = round(exitos_reales / n, 4) if n > 0 else 0.5
 
-    if len(valid) < 3:
-        cell(ws5, 2, 1,
-             f'⚠ Solo {len(valid)} registros. Los modelos probabilísticos '
-             'requieren al menos 30 datos para ser válidos (TCL). '
-             'Los valores mostrados son ilustrativos.',
-             bold=True, bg='FFF9C4', fg=C['accent_amber'], wrap=True,
-             h='left', border=False)
-        ws5.merge_cells('A2:I2')
-        ws5.row_dimensions[2].height = 35
-        sr5 = 4
-    else:
-        sr5 = 3
+    # Parámetros del modelo
+    r_obj = 3   # éxitos deseados
+    p_mod = p_real if p_real > 0 else 0.5
 
-    # ── Distribución Normal ──
-    sub_hdr(ws5, sr5, 1, 'Distribución Normal — Accel X ~ N(μ, σ²)', span=9)
-    norm_hdrs = ['Variable','Distribución','μ','σ²','σ',
-                 'P(X<0)','P(X>0)','IC 95% Inf','IC 95% Sup']
-    for ci, h in enumerate(norm_hdrs, 1):
-        hdr(ws5, sr5+1, ci, h)
+    ws5["A9"] = "Parámetros del modelo BN(r, p)"
+    ws5["A9"].font = _font("000000", True, 11)
 
-    for ri, name in enumerate(AX, sr5+2):
-        vals = ax_vals(name)
-        s    = _stat(vals)
-        mu, sigma = s.get('mean',0), s.get('std',0)
-        p_neg = round(_norm_cdf(0, mu, sigma), 4)
-        p_pos = round(1-p_neg, 4)
-        n     = s.get('n',1) or 1
-        se    = sigma/math.sqrt(n)
-        ic_lo = round(mu - 1.96*se, 4)
-        ic_hi = round(mu + 1.96*se, 4)
-        bg    = C['light_green'] if ri%2==0 else C['white']
-        dist  = f"N({mu:.4f}, {s.get('var',0):.4f})"
-        row_d = [name, dist, mu, s.get('var',0), sigma,
-                 p_neg, p_pos, ic_lo, ic_hi]
-        for ci, v in enumerate(row_d, 1):
-            nf = '0.0000' if ci in (3,4,5,6,7,8,9) else None
-            bold = ci == 1
-            cell(ws5, ri, ci, v, bold=bold, bg=bg,
-                 fg=COLORS_AX[ri-sr5-2] if ci==1 else '000000',
-                 h='center', num_fmt=nf)
+    params = [
+        ("r (éxitos deseados)", r_obj, "Disparos estables objetivo"),
+        ("p (prob. éxito)", p_mod, f"Estimado: {exitos_reales}/{n} disparos estables"),
+        ("E[X] = r/p", round(r_obj / p_mod, 4), "Disparos esperados hasta r éxitos"),
+        ("Var[X] = r(1-p)/p²", round(r_obj*(1-p_mod)/p_mod**2, 4), "Varianza del número de disparos"),
+        ("σ[X]", round(math.sqrt(r_obj*(1-p_mod)/p_mod**2), 4), "Desv. estándar del número de disparos"),
+    ]
 
-    # ── TCL ──
-    tcl_row = sr5 + 9
-    section_title(ws5, tcl_row, 1,
-        '  TEOREMA CENTRAL DEL LÍMITE — Error estándar', span=9)
-    tcl_hdrs = ['Variable','n','σ/√n (SE)','IC 95% Inf','IC 95% Sup',
-                'Unidad','Interpretación','','']
-    for ci, h in enumerate(tcl_hdrs, 1):
-        hdr(ws5, tcl_row+1, ci, h)
+    _hdr(ws5.cell(10, 1), "Parámetro",  bg=C_MED_BLUE)
+    _hdr(ws5.cell(10, 2), "Valor",      bg=C_MED_BLUE)
+    _hdr(ws5.cell(10, 3), "Interpretación", bg=C_MED_BLUE)
+    ws5.merge_cells(start_row=10, start_column=3, end_row=10, end_column=7)
 
-    for ri, name in enumerate(AX, tcl_row+2):
-        vals = ax_vals(name)
-        s    = _stat(vals)
-        mu, sigma = s.get('mean',0), s.get('std',0)
-        n    = s.get('n',1) or 1
-        se   = round(sigma/math.sqrt(n), 6)
-        ic_lo= round(mu - 1.96*se, 4)
-        ic_hi= round(mu + 1.96*se, 4)
-        bg   = C['light_green'] if ri%2==0 else C['white']
-        interp = (f'Con 95% de confianza, la media real de {name} '
-                  f'está entre {ic_lo} y {ic_hi} {UNITS[name]}')
-        for ci, v in enumerate([name, n, se, ic_lo, ic_hi,
-                                 UNITS[name], interp,'',''], 1):
-            nf = '0.0000' if ci in (3,4,5) else None
-            cell(ws5, ri, ci, v, bold=(ci==1), bg=bg, h='center',
-                 num_fmt=nf, wrap=(ci==7))
-        ws5.merge_cells(start_row=ri, start_column=7,
-                        end_row=ri, end_column=9)
+    for ri, (param, val, interp) in enumerate(params, 11):
+        bg = C_GRAY_LIGHT if ri % 2 == 0 else C_WHITE
+        ws5.cell(ri, 1).value = param
+        ws5.cell(ri, 1).font = _font("000000", True, 10)
+        ws5.cell(ri, 1).border = BORDER
+        ws5.cell(ri, 1).fill = _fill(bg)
+        ws5.cell(ri, 2).value = val
+        ws5.cell(ri, 2).font = _font(C_MED_BLUE, True, 10)
+        ws5.cell(ri, 2).border = BORDER
+        ws5.cell(ri, 2).fill = _fill(bg)
+        ws5.cell(ri, 2).number_format = "0.0000"
+        ws5.cell(ri, 3).value = interp
+        ws5.cell(ri, 3).font = _font("000000", False, 10)
+        ws5.cell(ri, 3).border = BORDER
+        ws5.cell(ri, 3).fill = _fill(bg)
+        ws5.merge_cells(start_row=ri, start_column=3, end_row=ri, end_column=7)
 
-    # ── Modelos discretos ──
-    disc_row = tcl_row + 10
-    section_title(ws5, disc_row, 1,
-        '  MODELOS DISCRETOS — Binomial y Geométrica', span=9)
-    disc_hdrs = ['Modelo','Variable','Evento','p','n','E[X]','σ','Interpretación','']
-    for ci, h in enumerate(disc_hdrs, 1):
-        hdr(ws5, disc_row+1, ci, h)
+    # Tabla PMF — P(X=k)
+    ws5["A17"] = "Distribución de probabilidad P(X=k) — Binomial Negativa"
+    ws5["A17"].font = _font("000000", True, 11)
 
-    # Binomial: Accel X > 0
-    ax_v    = ax_vals('Accel X')
-    p_bin   = round(sum(1 for v in ax_v if v>0)/len(ax_v), 4) if ax_v else 0
-    n_bin   = len(ax_v)
-    e_bin   = round(n_bin*p_bin, 2)
-    s_bin   = round(math.sqrt(n_bin*p_bin*(1-p_bin)), 4) if p_bin not in (0,1) else 0
-    interp_b = f'Se esperan {e_bin:.1f} disparos con Accel X > 0 de {n_bin} ensayos'
-    for ci, v in enumerate(['Binomial','Accel X','Accel X > 0',
-                             p_bin, n_bin, e_bin, s_bin, interp_b,''], 1):
-        nf = '0.0000' if ci == 4 else ('0.00' if ci in (6,7) else None)
-        cell(ws5, disc_row+2, ci, v, bg=C['light_green'],
-             h='center', num_fmt=nf, wrap=(ci==8))
+    _hdr(ws5.cell(18, 1), "k (total disparos)", bg=C_DARK_BLUE)
+    _hdr(ws5.cell(18, 2), "P(X=k)",             bg=C_DARK_BLUE)
+    _hdr(ws5.cell(18, 3), "P(X≤k) acumulada",   bg=C_DARK_BLUE)
+    ws5.merge_cells(start_row=18, start_column=3, end_row=18, end_column=5)
 
-    # Geométrica: Gyro X < -30
-    gx_v   = ax_vals('Gyro X')
-    p_geo  = sum(1 for v in gx_v if v<-30)/len(gx_v) if gx_v else 0
-    e_geo  = round(1/p_geo, 2) if p_geo > 0 else 'N/A (sin eventos en este dataset)'
-    s_note = ('⚠ p=0 en este dataset — no hubo eventos extremos. '
-              'Necesitas más disparos.' if p_geo==0 else
-              f'Se esperan {e_geo} disparos hasta el 1er Gyro X < −30°/s')
-    for ci, v in enumerate(['Geométrica','Gyro X','Gyro X < −30°/s',
-                             round(p_geo,4) if p_geo>0 else 0,
-                             '—', e_geo, '—', s_note,''], 1):
-        nf = '0.0000' if ci == 4 else None
-        cell(ws5, disc_row+3, ci, v, bg=C['white'],
-             h='center', num_fmt=nf, wrap=(ci==8))
+    k_max = min(r_obj + int(r_obj / p_mod * 3), 30)
+    acum = 0.0
+    pmf_row_start = 19
+    for ki, k in enumerate(range(r_obj, k_max + 1)):
+        p_k = _nb_pmf(r_obj, k, p_mod)
+        acum = round(acum + p_k, 6)
+        bg = C_GRAY_LIGHT if ki % 2 == 0 else C_WHITE
+        row = pmf_row_start + ki
+        ws5.cell(row, 1).value = k
+        ws5.cell(row, 1).fill = _fill(bg)
+        ws5.cell(row, 1).border = BORDER
+        ws5.cell(row, 1).alignment = _align("center")
+        ws5.cell(row, 2).value = p_k
+        ws5.cell(row, 2).fill = _fill(bg)
+        ws5.cell(row, 2).border = BORDER
+        ws5.cell(row, 2).number_format = "0.000000"
+        ws5.cell(row, 2).alignment = _align("center")
+        ws5.cell(row, 3).value = acum
+        ws5.cell(row, 3).fill = _fill(bg)
+        ws5.cell(row, 3).border = BORDER
+        ws5.cell(row, 3).number_format = "0.0000"
+        ws5.cell(row, 3).alignment = _align("center")
+        ws5.merge_cells(start_row=row, start_column=3, end_row=row, end_column=5)
 
-    # Nota final
-    note5_row = disc_row + 5
-    cell(ws5, note5_row, 1,
-         'Nota: Los modelos son válidos con n ≥ 30 (TCL). '
-         f'Dataset actual: n = {len(valid)}. '
-         'Con pocos datos, los parámetros son estimados pero no robustos. '
-         'Cada vez que descargues el Excel con más datos, los valores se recalculan automáticamente.',
-         italic=True, fg=C['muted'], wrap=True, h='left',
-         border=False, size=9)
-    ws5.merge_cells(f'A{note5_row}:I{note5_row}')
-    ws5.row_dimensions[note5_row].height = 35
+    # Gráfico PMF
+    pmf_end_row = pmf_row_start + (k_max - r_obj)
+    chart_nb = BarChart()
+    chart_nb.type = "col"
+    chart_nb.title = f"BN(r={r_obj}, p={p_mod}) — P(X=k)"
+    chart_nb.y_axis.title = "Probabilidad"
+    chart_nb.x_axis.title = "k (total disparos)"
+    chart_nb.style = 10
+    chart_nb.width = 16
+    chart_nb.height = 12
 
-    autowidth(ws5)
+    data_nb = Reference(ws5, min_col=2, max_col=2,
+                        min_row=18, max_row=pmf_end_row)
+    cats_nb = Reference(ws5, min_col=1, max_col=1,
+                        min_row=pmf_row_start, max_row=pmf_end_row)
+    chart_nb.add_data(data_nb, titles_from_data=True)
+    chart_nb.set_categories(cats_nb)
+    ws5.add_chart(chart_nb, "H3")
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HOJA 6 — GRÁFICAS DE EVOLUCIÓN POR DISPARO
-    # ═══════════════════════════════════════════════════════════════════════
-    ws6 = wb.create_sheet('Gráficas')
-    section_title(ws6, 1, 1,
-        '  EVOLUCIÓN POR DISPARO — Medias de cada eje', span=10)
+    _autowidth(ws5)
 
-    # Tabla de medias por disparo
-    hdr(ws6, 2, 1, 'Disparo')
-    for ci, name in enumerate(AX, 2):
-        hdr(ws6, 2, ci, f'{name} ({UNITS[name]})')
+    # =========================================================================
+    # HOJA 6 — Gráficas de evolución por disparo
+    # =========================================================================
+    ws6 = wb.create_sheet("Gráficas")
+    ws6.sheet_view.showGridLines = False
 
-    for ri, d in enumerate(d_ids, 3):
-        bg = C['light_green'] if ri%2==0 else C['white']
-        rs = by_d[d]
-        means = [sum(getattr(r,k.lower().replace(' ','_'))
-                     for r in rs)/len(rs) for k in AX]
-        cell(ws6, ri, 1, d, bg=bg, h='center',
-             fg=C['accent_blue'], bold=True)
-        for ci, v in enumerate(means, 2):
-            cell(ws6, ri, ci, round(v,4), bg=bg, h='center',
-                 fg=C['positive'] if v>=0 else C['negative'],
-                 num_fmt='0.0000')
+    ws6["A1"] = "EVOLUCIÓN POR DISPARO — Medias de cada eje"
+    ws6["A1"].font = _font(C_DARK_BLUE, True, 12)
+    ws6.merge_cells("A1:H1")
+    ws6["A1"].alignment = _align("left")
 
-    n_d = len(d_ids)
-    if n_d >= 2:
-        # Gráfico acelerómetro
-        chart_accel = LineChart()
-        chart_accel.title  = 'Acelerómetro por Disparo (g)'
-        chart_accel.y_axis.title = 'g'
-        chart_accel.x_axis.title = 'Número de disparo'
-        chart_accel.width = 18; chart_accel.height = 12
-        for ci, color in zip([2,3,4], ['4472C4','7030A0','70AD47']):
-            ref = Reference(ws6, min_col=ci, min_row=2, max_row=2+n_d)
-            chart_accel.add_data(ref, titles_from_data=True)
-            chart_accel.series[-1].graphicalProperties.line.solidFill = color
-        cats = Reference(ws6, min_col=1, min_row=3, max_row=2+n_d)
-        chart_accel.set_categories(cats)
-        ws6.add_chart(chart_accel, 'I3')
+    # Tabla de datos para gráficas
+    evo_hdrs = ["Disparo", "Accel X (g)", "Accel Y (g)", "Accel Z (g)",
+                "Gyro X (°/s)", "Gyro Y (°/s)", "Gyro Z (°/s)"]
+    for ci, h in enumerate(evo_hdrs, 1):
+        _hdr(ws6.cell(2, ci), h, bg=C_DARK_BLUE)
 
-        # Gráfico giroscopio
-        chart_gyro = LineChart()
-        chart_gyro.title  = 'Giroscopio por Disparo (°/s)'
-        chart_gyro.y_axis.title = '°/s'
-        chart_gyro.x_axis.title = 'Número de disparo'
-        chart_gyro.width = 18; chart_gyro.height = 12
-        for ci, color in zip([5,6,7], ['FF0000','FFC000','FF6600']):
-            ref = Reference(ws6, min_col=ci, min_row=2, max_row=2+n_d)
-            chart_gyro.add_data(ref, titles_from_data=True)
-            chart_gyro.series[-1].graphicalProperties.line.solidFill = color
-        chart_gyro.set_categories(cats)
-        ws6.add_chart(chart_gyro, 'I22')
+    for ri, rec in enumerate(records, 3):
+        bg = C_GRAY_LIGHT if (ri % 2 == 0) else C_WHITE
+        row_data = [rec.disparo, rec.accel_x, rec.accel_y, rec.accel_z,
+                    rec.gyro_x, rec.gyro_y, rec.gyro_z]
+        for ci, val in enumerate(row_data, 1):
+            c = ws6.cell(ri, ci)
+            _cell(c, val, bg=bg)
+            if isinstance(val, float):
+                c.number_format = "0.0000"
 
-    autowidth(ws6)
+    last_data_row = 2 + n
 
-    # ─── Guardar ─────────────────────────────────────────────────────────
+    # --- Gráfico Acelerómetro (líneas) ----------------------------------------
+    lc_a = LineChart()
+    lc_a.title = "Acelerómetro por Disparo (g)"
+    lc_a.y_axis.title = "Valor (g)"
+    lc_a.x_axis.title = "Número de disparo"
+    lc_a.style = 10
+    lc_a.width = 20
+    lc_a.height = 12
+
+    for col, color in [(2, "4472C4"), (3, "ED7D31"), (4, "70AD47")]:
+        ref = Reference(ws6, min_col=col, max_col=col,
+                        min_row=2, max_row=last_data_row)
+        lc_a.add_data(ref, titles_from_data=True)
+
+    cats_ref = Reference(ws6, min_col=1, max_col=1,
+                         min_row=3, max_row=last_data_row)
+    lc_a.set_categories(cats_ref)
+    ws6.add_chart(lc_a, "I2")
+
+    # --- Gráfico Giroscopio (líneas) ------------------------------------------
+    lc_g = LineChart()
+    lc_g.title = "Giroscopio por Disparo (°/s)"
+    lc_g.y_axis.title = "Valor (°/s)"
+    lc_g.x_axis.title = "Número de disparo"
+    lc_g.style = 10
+    lc_g.width = 20
+    lc_g.height = 12
+
+    for col, color in [(5, "FF0000"), (6, "FFC000"), (7, "00B050")]:
+        ref = Reference(ws6, min_col=col, max_col=col,
+                        min_row=2, max_row=last_data_row)
+        lc_g.add_data(ref, titles_from_data=True)
+
+    lc_g.set_categories(cats_ref)
+    ws6.add_chart(lc_g, "I22")
+
+    _autowidth(ws6)
+
+    # =========================================================================
+    # Guardar
+    # =========================================================================
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
