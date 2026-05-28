@@ -11,6 +11,14 @@
 [![Docs](https://img.shields.io/badge/Swagger-/docs-orange)](https://dron-agricola-api-3.onrender.com/docs)
 [![DB](https://img.shields.io/badge/DB-Neon%20PostgreSQL-teal)](https://neon.tech)
 
+<p align="center">
+  <a href="https://dron-agricola-api-3.onrender.com/">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://dron-agricola-api-3.onrender.com/" alt="QR Dashboard" width="180"/>
+  </a>
+  <br/>
+  <sub>Escanea para abrir el dashboard en vivo</sub>
+</p>
+
 ---
 
 ## Tabla de contenidos
