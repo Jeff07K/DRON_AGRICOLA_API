@@ -63,7 +63,7 @@
       <a class="btn btn-g" href="/api/export-excel">
         <span>⬇</span> EXCEL + STATS
       </a>
-      <a class="btn btn-a" href="/static/DronAgricola.apk" download id="btn-apk-hdr">
+      <a class="btn btn-a" href="/descargar" target="_blank" id="btn-apk-hdr">
         <span>📱</span> APK ANDROID
         <span class="dl-badge" id="apk-hdr">0</span>
       </a>
@@ -164,7 +164,7 @@
           <span class="apk-sub">contador global en BD</span>
         </div>
       </div>
-      <a class="btn btn-a" href="/static/DronAgricola.apk" download
+      <a class="btn btn-a" href="/descargar" target="_blank"
          id="btn-apk" style="justify-content:center">
         <span>📲</span> DESCARGAR APK
       </a>
@@ -374,6 +374,287 @@
   </div><!-- /tab-stats -->
 
 </section>
+
+<!-- ═══════════════════════════════════════════════════════
+     USUARIOS QUE DESCARGARON LA APK
+════════════════════════════════════════════════════════ -->
+<section id="usuarios-section">
+
+  <div class="panel-hdr">
+    <span class="panel-title">// USUARIOS QUE DESCARGARON LA APK</span>
+    <span class="panel-badge" id="u-badge">CARGANDO…</span>
+  </div>
+
+  <!-- KPIs de usuarios -->
+  <div id="u-kpi-strip">
+    <div class="kpi" style="--kc:var(--green)">
+      <div class="kpi-lbl">Total descargas</div>
+      <div class="kpi-val" id="u-total">—</div>
+      <div class="kpi-sub">registros en BD</div>
+    </div>
+    <div class="kpi" style="--kc:var(--amber)">
+      <div class="kpi-lbl">Puntuación media</div>
+      <div class="kpi-val" id="u-prom">—</div>
+      <div class="kpi-sub">sobre 5 ★</div>
+    </div>
+    <div class="kpi" style="--kc:var(--cyan)">
+      <div class="kpi-lbl">Depto. más activo</div>
+      <div class="kpi-val" id="u-depto" style="font-size:1rem">—</div>
+      <div class="kpi-sub">mayor cantidad</div>
+    </div>
+    <div class="kpi" style="--kc:var(--green2)">
+      <div class="kpi-lbl">Edad promedio</div>
+      <div class="kpi-val" id="u-edad">—</div>
+      <div class="kpi-sub">años</div>
+    </div>
+  </div>
+
+  <!-- Búsqueda de usuarios -->
+  <div id="u-search-bar">
+    <input  type="text"   id="u-q-nombre" placeholder="🔍  Buscar por nombre…" />
+    <input  type="text"   id="u-q-depto"  placeholder="📍  Buscar por departamento…" />
+    <select id="u-q-star">
+      <option value="">Todas las ★</option>
+      <option value="5">★★★★★  5</option>
+      <option value="4">★★★★  4+</option>
+      <option value="3">★★★  3+</option>
+      <option value="2">★★  2+</option>
+      <option value="1">★  1+</option>
+    </select>
+    <button class="btn btn-g" onclick="buscarUsuarios()">BUSCAR</button>
+    <button class="btn btn-a" onclick="loadUsuarios()">VER TODOS</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>NOMBRE</th>
+          <th>EDAD</th>
+          <th>DEPARTAMENTO</th>
+          <th>PUNTUACIÓN</th>
+          <th>COMENTARIO</th>
+          <th>TIMESTAMP</th>
+        </tr>
+      </thead>
+      <tbody id="u-body">
+        <tr><td colspan="7" class="loader">Cargando usuarios…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Gráfica de puntuaciones -->
+  <div class="cg2" style="margin-top:1.5rem">
+    <div class="cc">
+      <div class="cc-lbl">Distribución de puntuaciones (★)</div>
+      <div class="cc-sub">Cantidad de usuarios por calificación</div>
+      <canvas id="ch-u-stars" height="220"></canvas>
+    </div>
+    <div class="cc">
+      <div class="cc-lbl">Descargas por departamento (top 8)</div>
+      <div class="cc-sub">Departamentos con más registros de descarga</div>
+      <canvas id="ch-u-deptos" height="220"></canvas>
+    </div>
+  </div>
+
+</section>
+
+<style>
+#usuarios-section {
+  max-width: 1400px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+#u-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: .75rem;
+  margin: 1rem 0 1.25rem;
+}
+#u-search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+#u-search-bar input,
+#u-search-bar select {
+  background: var(--panel-bg, #1a1f1a);
+  border: 1px solid var(--border, #2e3a2e);
+  color: var(--fg, #e0e8e0);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: .82rem;
+  outline: none;
+  transition: border-color .2s;
+  flex: 1;
+  min-width: 160px;
+  max-width: 260px;
+}
+#u-search-bar input:focus,
+#u-search-bar select:focus {
+  border-color: var(--green, #4caf50);
+}
+#u-search-bar select option { background: #1a1f1a; }
+.u-stars { color: #ffb300; letter-spacing: 1px; }
+.u-badge-dep {
+  background: rgba(78,160,84,.15);
+  color: var(--green2, #81c784);
+  border: 1px solid rgba(78,160,84,.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: .75rem;
+}
+</style>
+
+<script>
+/* ── utilidades ─────────────────────────────────────── */
+function uFmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-CO') + ' ' + d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+}
+function uStars(n) {
+  return `<span class="u-stars">${'★'.repeat(n)}${'☆'.repeat(5-n)}</span>`;
+}
+
+/* ── renderizar tabla ───────────────────────────────── */
+function renderUsuarios(data) {
+  const tbody = document.getElementById('u-body');
+  document.getElementById('u-badge').textContent = data.length + ' REGISTROS';
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loader">Sin registros aún.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(u => `
+    <tr>
+      <td>${u.id}</td>
+      <td><b style="color:var(--green2)">${u.nombre}</b></td>
+      <td>${u.edad}</td>
+      <td><span class="u-badge-dep">${u.departamento}</span></td>
+      <td>${uStars(u.puntuacion)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          title="${u.comentario||''}">${u.comentario || '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">${uFmtDate(u.timestamp)}</td>
+    </tr>`).join('');
+}
+
+/* ── cargar stats + gráficas ────────────────────────── */
+let uStarsChart = null, uDeptChart = null;
+
+async function loadUsuariosStats() {
+  try {
+    const stats = await fetch('/api/usuarios/stats').then(r => r.json());
+    document.getElementById('u-total').textContent = stats.total_descargas;
+    document.getElementById('u-prom').textContent  = stats.promedio_puntuacion.toFixed(1) + ' ★';
+    document.getElementById('u-depto').textContent = stats.departamento_top;
+    document.getElementById('u-edad').textContent  = stats.edad_promedio;
+  } catch { /* silencioso */ }
+}
+
+function buildStarsChart(data) {
+  const counts = [1,2,3,4,5].map(s => data.filter(u => u.puntuacion===s).length);
+  const ctx = document.getElementById('ch-u-stars');
+  if (uStarsChart) uStarsChart.destroy();
+  uStarsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['1 ★','2 ★','3 ★','4 ★','5 ★'],
+      datasets: [{
+        data: counts,
+        backgroundColor: ['#e53935','#fb8c00','#fdd835','#7cb342','#2e7d32'],
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8fa38f' }, grid: { color: '#2a332a' } },
+        y: { beginAtZero: true, ticks: { color: '#8fa38f', stepSize: 1 }, grid: { color: '#2a332a' } }
+      }
+    }
+  });
+}
+
+function buildDeptChart(data) {
+  const counts = {};
+  data.forEach(u => { counts[u.departamento] = (counts[u.departamento]||0) + 1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const ctx = document.getElementById('ch-u-deptos');
+  if (uDeptChart) uDeptChart.destroy();
+  uDeptChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e=>e[0]),
+      datasets: [{
+        data: sorted.map(e=>e[1]),
+        backgroundColor: '#4caf50',
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { color: '#8fa38f', stepSize: 1 }, grid: { color: '#2a332a' } },
+        y: { ticks: { color: '#8fa38f', font: { size: 11 } }, grid: { color: '#2a332a' } }
+      }
+    }
+  });
+}
+
+/* ── cargar todos ───────────────────────────────────── */
+async function loadUsuarios() {
+  const tbody = document.getElementById('u-body');
+  tbody.innerHTML = '<tr><td colspan="7" class="loader">Cargando…</td></tr>';
+  try {
+    const data = await fetch('/api/usuarios').then(r => r.json());
+    renderUsuarios(data);
+    buildStarsChart(data);
+    buildDeptChart(data);
+    loadUsuariosStats();
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="7" class="loader">Error al cargar usuarios.</td></tr>';
+  }
+}
+
+/* ── búsqueda ───────────────────────────────────────── */
+async function buscarUsuarios() {
+  const nombre  = document.getElementById('u-q-nombre').value.trim();
+  const depto   = document.getElementById('u-q-depto').value.trim();
+  const estrellas = document.getElementById('u-q-star').value;
+  let url = '/api/usuarios/buscar?';
+  if (nombre)    url += `nombre=${encodeURIComponent(nombre)}&`;
+  if (depto)     url += `departamento=${encodeURIComponent(depto)}&`;
+  if (estrellas) url += `puntuacion_min=${estrellas}&`;
+  const tbody = document.getElementById('u-body');
+  tbody.innerHTML = '<tr><td colspan="7" class="loader">Buscando…</td></tr>';
+  try {
+    const data = await fetch(url).then(r => r.json());
+    renderUsuarios(Array.isArray(data) ? data : []);
+    if (Array.isArray(data) && data.length) { buildStarsChart(data); buildDeptChart(data); }
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="7" class="loader">Error al buscar.</td></tr>';
+  }
+}
+
+/* ── búsqueda en tiempo real ────────────────────────── */
+['u-q-nombre','u-q-depto'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    clearTimeout(window._uTimer);
+    window._uTimer = setTimeout(buscarUsuarios, 380);
+  });
+});
+document.getElementById('u-q-star').addEventListener('change', buscarUsuarios);
+
+/* ── arrancar ───────────────────────────────────────── */
+loadUsuarios();
+</script>
 
 <!-- ═══════════════════════════════════════════════════════
      FOOTER
