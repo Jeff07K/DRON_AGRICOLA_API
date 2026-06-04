@@ -3,7 +3,7 @@
 > Diseño e implementación de un robot de tracción diferencial sobre chasis de oruga con pistola de hidrogel para reforestación automatizada, controlado por Bluetooth desde app Android, con análisis estadístico completo de variables inerciales del MPU6050.
 
 **Universidad Católica de Colombia · Ingeniería de Sistemas · 2026-1**  
-**Asignatura: Estadística — Actividad Aplicada C3**  
+**Asignatura: Estadística — SOFWARE — Actividad Aplicada C3**  
 **Autor: Jeffrey Alejandro Bejarano Parada — 67001609**
 
 [![API Live](https://img.shields.io/badge/API-Live%20en%20Render-brightgreen)](https://dron-agricola-api-3.onrender.com)
