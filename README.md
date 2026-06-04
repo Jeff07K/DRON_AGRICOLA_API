@@ -183,7 +183,7 @@ La app funciona **sin internet** — el Bluetooth es la capa de control. El HTTP
 ## Backend FastAPI + Neon PostgreSQL
 
 **URL pública:** [https://dron-agricola-api-3.onrender.com](https://dron-agricola-api-3.onrender.com)  
-**URL pública:** [https://jeffbejarano.dpdns.org/]([https://dron-agricola-api-3.onrender.com](https://jeffbejarano.dpdns.org/))  
+**URL pública:** [https://jeffbejarano.dpdns.org/](https://jeffbejarano.dpdns.org/)  
 **Swagger UI:** [https://dron-agricola-api-3.onrender.com/docs](https://dron-agricola-api-3.onrender.com/docs)
 
 ### Estructura del backend
@@ -230,6 +230,7 @@ DATABASE_URL = postgresql+asyncpg://neondb_owner:...@ep-....neon.tech/neondb?ssl
 ## Dashboard web
 
 Accesible públicamente en [https://dron-agricola-api-3.onrender.com](https://dron-agricola-api-3.onrender.com).
+Accesible públicamente en [https://jeffbejarano.dpdns.org/](https://jeffbejarano.dpdns.org/)
 
 **Visualizaciones disponibles (refresco automático cada 5s):**
 - Gráfico de radar — promedios de los 6 ejes del MPU6050
