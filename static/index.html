@@ -450,12 +450,19 @@
     <div class="cc">
       <div class="cc-lbl">Distribución de puntuaciones (★)</div>
       <div class="cc-sub">Cantidad de usuarios por calificación</div>
-      <canvas id="ch-u-stars" height="220"></canvas>
+      <!-- FIX: contenedor con position:relative y height fija.
+           Sin esto Chart.js recalcula la altura en cada llamada a
+           loadUsuarios() y el canvas crece indefinidamente. -->
+      <div style="position:relative; height:220px; width:100%;">
+        <canvas id="ch-u-stars"></canvas>
+      </div>
     </div>
     <div class="cc">
       <div class="cc-lbl">Descargas por departamento (top 8)</div>
       <div class="cc-sub">Departamentos con más registros de descarga</div>
-      <canvas id="ch-u-deptos" height="220"></canvas>
+      <div style="position:relative; height:220px; width:100%;">
+        <canvas id="ch-u-deptos"></canvas>
+      </div>
     </div>
   </div>
 
