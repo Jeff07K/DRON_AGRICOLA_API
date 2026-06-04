@@ -183,6 +183,7 @@ La app funciona **sin internet** — el Bluetooth es la capa de control. El HTTP
 ## Backend FastAPI + Neon PostgreSQL
 
 **URL pública:** [https://dron-agricola-api-3.onrender.com](https://dron-agricola-api-3.onrender.com)  
+**URL pública:** [https://jeffbejarano.dpdns.org/]([https://dron-agricola-api-3.onrender.com](https://jeffbejarano.dpdns.org/))  
 **Swagger UI:** [https://dron-agricola-api-3.onrender.com/docs](https://dron-agricola-api-3.onrender.com/docs)
 
 ### Estructura del backend
