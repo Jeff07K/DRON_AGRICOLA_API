@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dron Agrícola — Descargar APK</title>
+  <style>
+    :root {
+      --green:     #1D9E75;
+      --green-dk:  #0F6E56;
+      --green-lt:  #E1F5EE;
+      --amber:     #BA7517;
+      --amber-lt:  #FAEEDA;
+      --red:       #A32D2D;
+      --red-lt:    #FCEBEB;
+      --gray-100:  #F5F5F3;
+      --gray-200:  #E8E6DF;
+      --gray-500:  #888780;
+      --gray-800:  #2C2C2A;
+      --text:      #1a1a18;
+      --radius:    12px;
+      --shadow:    0 2px 16px rgba(0,0,0,.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--gray-100);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 60px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 540px;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .card-header {
+      background: var(--green);
+      padding: 28px 32px 24px;
+      text-align: center;
+      color: #fff;
+    }
+    .drone-icon {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    .card-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .card-header p {
+      font-size: 13px;
+      opacity: .85;
+      margin-top: 4px;
+    }
+
+    /* ── Body ── */
+    .card-body { padding: 28px 32px; }
+
+    .field { margin-bottom: 20px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-800);
+      margin-bottom: 6px;
+    }
+    label span.req { color: var(--green); margin-left: 2px; }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+      transition: border-color .2s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(29,158,117,.12);
+    }
+    input.error, select.error, textarea.error {
+      border-color: var(--red);
+    }
+    .err-msg {
+      font-size: 12px;
+      color: var(--red);
+      margin-top: 4px;
+      display: none;
+    }
+    .err-msg.show { display: block; }
+
+    textarea { resize: vertical; min-height: 72px; }
+
+    /* ── Star rating ── */
+    .star-row {
+      display: flex;
+      flex-direction: row-reverse;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .star-row input[type="radio"] { display: none; }
+    .star-row label {
+      font-size: 32px;
+      cursor: pointer;
+      color: var(--gray-200);
+      transition: color .15s, transform .1s;
+      margin-bottom: 0;
+      line-height: 1;
+    }
+    .star-row label:hover,
+    .star-row label:hover ~ label,
+    .star-row input[type="radio"]:checked ~ label {
+      color: #EF9F27;
+    }
+    .star-row label:active { transform: scale(1.2); }
+    #star-error { margin-top: 6px; }
+
+    /* ── Submit ── */
+    .btn-submit {
+      width: 100%;
+      padding: 13px;
+      background: var(--green);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-submit:hover { background: var(--green-dk); }
+    .btn-submit:active { transform: scale(0.99); }
+    .btn-submit:disabled { background: var(--gray-500); cursor: not-allowed; }
+
+    /* ── States ── */
+    #state-loading,
+    #state-success,
+    #state-error { display: none; padding: 28px 32px; text-align: center; }
+
+    #state-loading .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #state-success .check { font-size: 52px; margin-bottom: 12px; display: block; }
+    #state-success h2 { font-size: 18px; color: var(--green-dk); margin-bottom: 6px; }
+    #state-success p  { font-size: 14px; color: var(--gray-500); margin-bottom: 20px; }
+
+    #state-error .x { font-size: 52px; margin-bottom: 12px; display: block; }
+    #state-error h2 { font-size: 18px; color: var(--red); margin-bottom: 6px; }
+    #state-error p  { font-size: 14px; color: var(--gray-500); margin-bottom: 20px; }
+
+    .btn-dl {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: var(--green);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .btn-dl:hover { background: var(--green-dk); }
+
+    .btn-retry {
+      margin-top: 12px;
+      background: none;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--gray-800);
+      transition: border-color .2s;
+    }
+    .btn-retry:hover { border-color: var(--green); color: var(--green); }
+
+    /* ── Footer note ── */
+    .note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray-500);
+      padding: 0 32px 24px;
+      line-height: 1.6;
+    }
+    .note a { color: var(--green); text-decoration: none; }
+
+    @media (max-width: 480px) {
+      .card-body, #state-loading, #state-success, #state-error { padding: 22px 20px; }
+      .card-header { padding: 22px 20px 18px; }
+      .note { padding: 0 20px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card" role="main">
+
+  <!-- Header -->
+  <div class="card-header">
+    <span class="drone-icon" aria-hidden="true">🚁</span>
+    <h1>Descarga la App del Dron Agrícola</h1>
+    <p>Completa el formulario para obtener la APK de control</p>
+  </div>
+
+  <!-- Formulario -->
+  <div class="card-body" id="state-form">
+    <form id="form-descarga" novalidate>
+
+      <!-- Nombre -->
+      <div class="field">
+        <label for="nombre">Nombre completo <span class="req">*</span></label>
+        <input
+          type="text"
+          id="nombre"
+          name="nombre"
+          placeholder="Ej: Carlos Andrés Pérez"
+          maxlength="100"
+          autocomplete="name"
+        />
+        <p class="err-msg" id="err-nombre">Ingresa tu nombre (mínimo 2 caracteres).</p>
+      </div>
+
+      <!-- Edad -->
+      <div class="field">
+        <label for="edad">Edad <span class="req">*</span></label>
+        <input
+          type="number"
+          id="edad"
+          name="edad"
+          placeholder="Ej: 24"
+          min="5"
+          max="120"
+        />
+        <p class="err-msg" id="err-edad">Ingresa una edad válida entre 5 y 120.</p>
+      </div>
+
+      <!-- Departamento -->
+      <div class="field">
+        <label for="departamento">Departamento <span class="req">*</span></label>
+        <select id="departamento" name="departamento">
+          <option value="" disabled selected>— Selecciona tu departamento —</option>
+          <option>Amazonas</option><option>Antioquia</option><option>Arauca</option>
+          <option>Atlántico</option><option>Bolívar</option><option>Boyacá</option>
+          <option>Caldas</option><option>Caquetá</option><option>Casanare</option>
+          <option>Cauca</option><option>Cesar</option><option>Chocó</option>
+          <option>Córdoba</option><option>Cundinamarca</option><option>Guainía</option>
+          <option>Guaviare</option><option>Huila</option><option>La Guajira</option>
+          <option>Magdalena</option><option>Meta</option><option>Nariño</option>
+          <option>Norte de Santander</option><option>Putumayo</option>
+          <option>Quindío</option><option>Risaralda</option>
+          <option>San Andrés y Providencia</option><option>Santander</option>
+          <option>Sucre</option><option>Tolima</option>
+          <option>Valle del Cauca</option><option>Vaupés</option><option>Vichada</option>
+        </select>
+        <p class="err-msg" id="err-departamento">Selecciona un departamento.</p>
+      </div>
+
+      <!-- Puntuación estrellas -->
+      <div class="field">
+        <label>Puntuación <span class="req">*</span></label>
+        <div class="star-row" role="radiogroup" aria-label="Puntuación de 1 a 5 estrellas">
+          <input type="radio" id="s5" name="puntuacion" value="5" /><label for="s5" title="5 estrellas">★</label>
+          <input type="radio" id="s4" name="puntuacion" value="4" /><label for="s4" title="4 estrellas">★</label>
+          <input type="radio" id="s3" name="puntuacion" value="3" /><label for="s3" title="3 estrellas">★</label>
+          <input type="radio" id="s2" name="puntuacion" value="2" /><label for="s2" title="2 estrellas">★</label>
+          <input type="radio" id="s1" name="puntuacion" value="1" /><label for="s1" title="1 estrella">★</label>
+        </div>
+        <p class="err-msg" id="star-error">Selecciona una puntuación.</p>
+      </div>
+
+      <!-- Comentario opcional -->
+      <div class="field">
+        <label for="comentario">Comentario <span style="color:var(--gray-500);font-weight:400">(opcional)</span></label>
+        <textarea
+          id="comentario"
+          name="comentario"
+          placeholder="¿Qué te parece el proyecto del dron agrícola?"
+          maxlength="500"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="btn-submit" id="btn-enviar">
+        <span>📥</span> Registrarme y descargar APK
+      </button>
+    </form>
+  </div>
+
+  <!-- Estado: cargando -->
+  <div id="state-loading" aria-live="polite">
+    <div class="spinner"></div>
+    <p style="color:var(--gray-500);font-size:14px">Registrando datos...</p>
+  </div>
+
+  <!-- Estado: éxito -->
+  <div id="state-success" aria-live="polite">
+    <span class="check">✅</span>
+    <h2>¡Gracias por registrarte!</h2>
+    <p id="success-msg">Tu descarga comenzará automáticamente.</p>
+    <a id="btn-download" class="btn-dl" href="#" download>
+      📲 Descargar APK ahora
+    </a>
+    <br/><br/>
+    <a href="/" style="font-size:13px;color:var(--green)">← Volver al dashboard</a>
+  </div>
+
+  <!-- Estado: error -->
+  <div id="state-error" aria-live="polite">
+    <span class="x">❌</span>
+    <h2>Algo salió mal</h2>
+    <p id="error-msg">No pudimos completar tu registro.</p>
+    <button class="btn-retry" onclick="showForm()">Intentar de nuevo</button>
+  </div>
+
+  <p class="note" id="form-note">
+    Tus datos se usan exclusivamente para estadísticas del proyecto.<br>
+    <a href="/docs" target="_blank">Ver documentación de la API</a> ·
+    <a href="/" >Volver al dashboard</a>
+  </p>
+</div>
+
+<script>
+  // ── Utilidades de estado ──────────────────────────────────────
+  const $ = id => document.getElementById(id);
+
+  function showForm() {
+    $('state-form').style.display   = 'block';
+    $('state-loading').style.display = 'none';
+    $('state-success').style.display = 'none';
+    $('state-error').style.display   = 'none';
+    $('form-note').style.display     = 'block';
+  }
+  function showLoading() {
+    $('state-form').style.display    = 'none';
+    $('state-loading').style.display = 'block';
+    $('state-success').style.display = 'none';
+    $('state-error').style.display   = 'none';
+    $('form-note').style.display     = 'none';
+  }
+  function showSuccess(nombre, apkUrl) {
+    $('state-loading').style.display = 'none';
+    $('state-success').style.display = 'block';
+    $('success-msg').textContent =
+      `¡Hola, ${nombre}! Tu registro fue exitoso. La descarga iniciará en un momento.`;
+    const dlBtn = $('btn-download');
+    dlBtn.href = apkUrl || '#';
+    if (apkUrl) {
+      setTimeout(() => { window.location.href = apkUrl; }, 1200);
+    }
+  }
+  function showError(msg) {
+    $('state-loading').style.display = 'none';
+    $('state-error').style.display   = 'block';
+    $('form-note').style.display     = 'block';
+    $('error-msg').textContent = msg || 'Error desconocido. Intenta de nuevo.';
+  }
+
+  // ── Validación ────────────────────────────────────────────────
+  function validate() {
+    let ok = true;
+
+    // Nombre
+    const nombre = $('nombre').value.trim();
+    if (nombre.length < 2) {
+      $('nombre').classList.add('error');
+      $('err-nombre').classList.add('show');
+      ok = false;
+    } else {
+      $('nombre').classList.remove('error');
+      $('err-nombre').classList.remove('show');
+    }
+
+    // Edad
+    const edadVal = parseInt($('edad').value, 10);
+    if (isNaN(edadVal) || edadVal < 5 || edadVal > 120) {
+      $('edad').classList.add('error');
+      $('err-edad').classList.add('show');
+      ok = false;
+    } else {
+      $('edad').classList.remove('error');
+      $('err-edad').classList.remove('show');
+    }
+
+    // Departamento
+    const dep = $('departamento').value;
+    if (!dep) {
+      $('departamento').classList.add('error');
+      $('err-departamento').classList.add('show');
+      ok = false;
+    } else {
+      $('departamento').classList.remove('error');
+      $('err-departamento').classList.remove('show');
+    }
+
+    // Estrellas
+    const starSel = document.querySelector('input[name="puntuacion"]:checked');
+    if (!starSel) {
+      $('star-error').classList.add('show');
+      ok = false;
+    } else {
+      $('star-error').classList.remove('show');
+    }
+
+    return ok;
+  }
+
+  // ── Submit ────────────────────────────────────────────────────
+  $('form-descarga').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    showLoading();
+
+    const starSel = document.querySelector('input[name="puntuacion"]:checked');
+    const payload = {
+      nombre:      $('nombre').value.trim(),
+      edad:        parseInt($('edad').value, 10),
+      departamento: $('departamento').value,
+      puntuacion:  parseInt(starSel.value, 10),
+      comentario:  $('comentario').value.trim() || null,
+    };
+
+    try {
+      const res = await fetch('/api/usuarios', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const detail = err.detail || `Error ${res.status}`;
+        throw new Error(detail);
+      }
+
+      // APK URL — cambia esta ruta a la real de tu repo/release
+      const APK_URL = '/static/DronAgricola.apk';
+      showSuccess(payload.nombre, APK_URL);
+
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+
+  // Limpiar errores al escribir
+  ['nombre','edad','departamento','comentario'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('input', () => {
+      el.classList.remove('error');
+      const errEl = $('err-' + id);
+      if (errEl) errEl.classList.remove('show');
+    });
+  });
+  document.querySelectorAll('input[name="puntuacion"]').forEach(r => {
+    r.addEventListener('change', () => $('star-error').classList.remove('show'));
+  });
+</script>
+
+</body>
+</html>
