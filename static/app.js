@@ -14,18 +14,13 @@
 'use strict';
 
 // ── Config ────────────────────────────────────────────────────────
-// FIX DOMINIO PROPIO: si el frontend se sirve desde un dominio que NO
-// es el mismo origen que el backend FastAPI, las rutas relativas fallan.
-// Detectamos el hostname y apuntamos al backend correcto.
-const BACKEND =
-  window.location.hostname === 'dron-agricola-api-3.onrender.com'
-    ? ''   // mismo origen → rutas relativas funcionan
-    : 'https://dron-agricola-api-3.onrender.com';  // dominio propio → absoluto
-
-const API_URL = BACKEND + '/api/sensor-data';
+// BACKEND se define en index.html (window.BACKEND) antes de que este
+// script cargue. Lo leemos aquí para usarlo como constante local.
+// Si por alguna razón no está definido, fallback a cadena vacía (mismo origen).
+const BACKEND  = (typeof window.BACKEND !== 'undefined') ? window.BACKEND : '';
+const API_URL  = BACKEND + '/api/sensor-data';
 const REFRESH_MS = 5000;
 
-// Helper: construye URLs absolutas o relativas según el origen
 function apiUrl(path) { return BACKEND + path; }
 
 // ── Axes ──────────────────────────────────────────────────────────
