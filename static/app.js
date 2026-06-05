@@ -200,10 +200,12 @@ function renderTable() {
 // APK COUNTER
 // ═══════════════════════════════════════════════════════════════════
 async function loadApkCount() {
+  // FIX: acepta tanto {count: N} como {total: N} por si la API cambia
   try {
     const res  = await fetch('/api/apk-downloads');
+    if (!res.ok) throw new Error(res.status);
     const data = await res.json();
-    apkCount = data.count || 0;
+    apkCount = data.count ?? data.total ?? 0;
   } catch {
     apkCount = parseInt(localStorage.getItem('apk_dl') || '0', 10);
   }
@@ -211,16 +213,26 @@ async function loadApkCount() {
 }
 
 async function bumpApkCount() {
+  // Incremento optimista inmediato en la UI
   apkCount++;
   renderApkCount(true);
+
+  // FIX CONTADOR: esperamos que el POST termine ANTES de navegar.
+  // Bug original: los <a href target="_blank"> navegaban al instante,
+  // cancelando el fetch POST antes de que completara.
+  // Solución: los botones son <button>; la navegacion la controlamos
+  // aqui, despues del await, garantizando que el registro llegue a la BD.
   try {
-    const res  = await fetch('/api/apk-downloads', { method:'POST' });
+    const res  = await fetch('/api/apk-downloads', { method: 'POST' });
     const data = await res.json();
     apkCount = data.count;
     renderApkCount(false);
   } catch {
     localStorage.setItem('apk_dl', apkCount);
   }
+
+  // Navegar DESPUES de que el POST termino (exitoso o no)
+  window.open('/descargar', '_blank');
 }
 
 function renderApkCount(anim) {
