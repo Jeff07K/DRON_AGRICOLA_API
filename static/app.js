@@ -14,14 +14,8 @@
 'use strict';
 
 // ── Config ────────────────────────────────────────────────────────
-// BACKEND se define en index.html (window.BACKEND) antes de que este
-// script cargue. Lo leemos aquí para usarlo como constante local.
-// Si por alguna razón no está definido, fallback a cadena vacía (mismo origen).
-const BACKEND  = (typeof window.BACKEND !== 'undefined') ? window.BACKEND : '';
-const API_URL  = BACKEND + '/api/sensor-data';
+const API_URL    = '/api/sensor-data';
 const REFRESH_MS = 5000;
-
-function apiUrl(path) { return BACKEND + path; }
 
 // ── Axes ──────────────────────────────────────────────────────────
 const AXES = [
@@ -207,10 +201,9 @@ function renderTable() {
 // ═══════════════════════════════════════════════════════════════════
 async function loadApkCount() {
   try {
-    const res  = await fetch(apiUrl('/api/apk-downloads'));
+    const res  = await fetch('/api/apk-downloads');
     if (!res.ok) throw new Error(res.status);
     const data = await res.json();
-    // FIX: acepta {count:N} o {total:N}
     apkCount = data.count ?? data.total ?? 0;
   } catch {
     apkCount = parseInt(localStorage.getItem('apk_dl') || '0', 10);
@@ -219,25 +212,23 @@ async function loadApkCount() {
 }
 
 async function bumpApkCount(e) {
-  // FIX CONTADOR: preventDefault impide que el <a> navegue inmediatamente.
-  // El await garantiza que el POST llegue a la BD antes de abrir la descarga.
+  // preventDefault: evita que el <a> navegue antes de que el POST termine
   if (e) e.preventDefault();
 
   apkCount++;
   renderApkCount(true);
 
   try {
-    const res  = await fetch(apiUrl('/api/apk-downloads'), { method: 'POST' });
+    const res  = await fetch('/api/apk-downloads', { method: 'POST' });
     const data = await res.json();
-    // FIX: el endpoint puede devolver {count:N} o {total:N} — aceptamos ambos
     apkCount = data.count ?? data.total ?? apkCount;
     renderApkCount(false);
   } catch {
     localStorage.setItem('apk_dl', apkCount);
   }
 
-  // Navegar DESPUÉS de que el POST terminó
-  window.open(BACKEND + '/descargar', '_blank');
+  // Navegar DESPUÉS del POST — garantiza que el contador llegue a la BD
+  window.open('/descargar', '_blank');
 }
 
 function renderApkCount(anim) {
@@ -255,8 +246,8 @@ function renderApkCount(anim) {
 }
 
 function initApkButton() {
-  document.getElementById('btn-apk')?.addEventListener('click', bumpApkCount);
-  document.getElementById('btn-apk-hdr')?.addEventListener('click', bumpApkCount);
+  // Los botones ya tienen onclick="bumpApkCount(event)" en el HTML.
+  // NO agregamos addEventListener aquí para evitar doble disparo (2 en 2).
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -433,7 +424,6 @@ function buildRadar() {
   const rOpts = (showLegend) => ({
     responsive: true,
     maintainAspectRatio: false,
-    // Contenedor con height fija → false es correcto
     animation: { duration: 400 },
     scales: {
       r: {
