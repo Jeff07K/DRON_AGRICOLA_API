@@ -1,4 +1,4 @@
-# 🤖 Sistema Robótico Da Vinci — Dispersión Autónoma de Semillas
+# 🤖 Dron Agricola — Dispersión de Semillas
 
 > Diseño e implementación de un robot de tracción diferencial sobre chasis de oruga con pistola de hidrogel para reforestación automatizada, controlado por Bluetooth desde app Android, con análisis estadístico completo de variables inerciales del MPU6050.
 
