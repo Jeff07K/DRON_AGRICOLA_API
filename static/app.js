@@ -14,8 +14,19 @@
 'use strict';
 
 // ── Config ────────────────────────────────────────────────────────
-const API_URL    = '/api/sensor-data';
+// FIX DOMINIO PROPIO: si el frontend se sirve desde un dominio que NO
+// es el mismo origen que el backend FastAPI, las rutas relativas fallan.
+// Detectamos el hostname y apuntamos al backend correcto.
+const BACKEND =
+  window.location.hostname === 'dron-agricola-api-3.onrender.com'
+    ? ''   // mismo origen → rutas relativas funcionan
+    : 'https://dron-agricola-api-3.onrender.com';  // dominio propio → absoluto
+
+const API_URL = BACKEND + '/api/sensor-data';
 const REFRESH_MS = 5000;
+
+// Helper: construye URLs absolutas o relativas según el origen
+function apiUrl(path) { return BACKEND + path; }
 
 // ── Axes ──────────────────────────────────────────────────────────
 const AXES = [
@@ -201,26 +212,37 @@ function renderTable() {
 // ═══════════════════════════════════════════════════════════════════
 async function loadApkCount() {
   try {
-    const res  = await fetch('/api/apk-downloads');
+    const res  = await fetch(apiUrl('/api/apk-downloads'));
+    if (!res.ok) throw new Error(res.status);
     const data = await res.json();
-    apkCount = data.count || 0;
+    // FIX: acepta {count:N} o {total:N}
+    apkCount = data.count ?? data.total ?? 0;
   } catch {
     apkCount = parseInt(localStorage.getItem('apk_dl') || '0', 10);
   }
   renderApkCount(false);
 }
 
-async function bumpApkCount() {
+async function bumpApkCount(e) {
+  // FIX CONTADOR: preventDefault impide que el <a> navegue inmediatamente.
+  // El await garantiza que el POST llegue a la BD antes de abrir la descarga.
+  if (e) e.preventDefault();
+
   apkCount++;
   renderApkCount(true);
+
   try {
-    const res  = await fetch('/api/apk-downloads', { method:'POST' });
+    const res  = await fetch(apiUrl('/api/apk-downloads'), { method: 'POST' });
     const data = await res.json();
-    apkCount = data.count;
+    // FIX: el endpoint puede devolver {count:N} o {total:N} — aceptamos ambos
+    apkCount = data.count ?? data.total ?? apkCount;
     renderApkCount(false);
   } catch {
     localStorage.setItem('apk_dl', apkCount);
   }
+
+  // Navegar DESPUÉS de que el POST terminó
+  window.open(BACKEND + '/descargar', '_blank');
 }
 
 function renderApkCount(anim) {
@@ -416,8 +438,7 @@ function buildRadar() {
   const rOpts = (showLegend) => ({
     responsive: true,
     maintainAspectRatio: false,
-    // FIX contenedor fijo: false porque el wrapper div tiene height:260px
-    //         el frame vacío inicial que deja la gráfica en blanco
+    // Contenedor con height fija → false es correcto
     animation: { duration: 400 },
     scales: {
       r: {

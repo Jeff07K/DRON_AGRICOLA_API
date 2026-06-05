@@ -8,6 +8,15 @@
   <link rel="shortcut icon" href="https://digimon.net/profile/images/profile/kodai/img_kodai_10.png" />
   <link rel="stylesheet" href="/static/styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script>
+    /* FIX DOMINIO: define window.BACKEND para que app.js y los scripts
+       inline de index.html puedan construir URLs absolutas cuando el
+       frontend se sirve desde un dominio distinto al backend FastAPI. */
+    window.BACKEND =
+      window.location.hostname === 'dron-agricola-api-3.onrender.com'
+        ? ''   /* mismo origen: rutas relativas funcionan */
+        : 'https://dron-agricola-api-3.onrender.com'; /* dominio propio */
+  </script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -60,10 +69,11 @@
     </div>
 
     <div class="header-actions">
-      <a class="btn btn-g" href="/api/export-excel">
+      <a class="btn btn-g" href="#" onclick="window.open((window.BACKEND||'')+'/api/export-excel','_blank');return false;">
         <span>⬇</span> EXCEL + STATS
       </a>
-      <a class="btn btn-a" href="/descargar" target="_blank" id="btn-apk-hdr">
+      <a class="btn btn-a" href="/descargar" target="_blank" id="btn-apk-hdr"
+         onclick="bumpApkCount(event)">
         <span>📱</span> APK ANDROID
         <span class="dl-badge" id="apk-hdr">0</span>
       </a>
@@ -148,7 +158,7 @@
     <div class="side-card">
       <div class="side-title">📊 Exportar datos Excel</div>
       <div class="side-desc">Datos crudos + estadísticas completas: media, varianza, Q1–Q3, IQR, CV, Pearson, regresión, histogramas con bins reales, análisis probabilístico</div>
-      <a class="btn btn-g" href="/api/export-excel" style="justify-content:center">
+      <a class="btn btn-g" href="#" style="justify-content:center" onclick="window.open((window.BACKEND||'')+'/api/export-excel','_blank');return false;">
         <span>⬇</span> DESCARGAR EXCEL
       </a>
     </div>
@@ -165,7 +175,8 @@
         </div>
       </div>
       <a class="btn btn-a" href="/descargar" target="_blank"
-         id="btn-apk" style="justify-content:center">
+         id="btn-apk" style="justify-content:center"
+         onclick="bumpApkCount(event)">
         <span>📲</span> DESCARGAR APK
       </a>
     </div>
@@ -547,7 +558,7 @@ let uStarsChart = null, uDeptChart = null;
 
 async function loadUsuariosStats() {
   try {
-    const stats = await fetch('/api/usuarios/stats').then(r => r.json());
+    const stats = await fetch((window.BACKEND||'') + '/api/usuarios/stats').then(r => r.json());
     document.getElementById('u-total').textContent = stats.total_descargas;
     document.getElementById('u-prom').textContent  = stats.promedio_puntuacion.toFixed(1) + ' ★';
     document.getElementById('u-depto').textContent = stats.departamento_top;
@@ -613,7 +624,7 @@ async function loadUsuarios() {
   const tbody = document.getElementById('u-body');
   tbody.innerHTML = '<tr><td colspan="7" class="loader">Cargando…</td></tr>';
   try {
-    const data = await fetch('/api/usuarios').then(r => r.json());
+    const data = await fetch((window.BACKEND||'') + '/api/usuarios').then(r => r.json());
     renderUsuarios(data);
     buildStarsChart(data);
     buildDeptChart(data);
@@ -628,7 +639,7 @@ async function buscarUsuarios() {
   const nombre  = document.getElementById('u-q-nombre').value.trim();
   const depto   = document.getElementById('u-q-depto').value.trim();
   const estrellas = document.getElementById('u-q-star').value;
-  let url = '/api/usuarios/buscar?';
+  let url = (window.BACKEND||'') + '/api/usuarios/buscar?';
   if (nombre)    url += `nombre=${encodeURIComponent(nombre)}&`;
   if (depto)     url += `departamento=${encodeURIComponent(depto)}&`;
   if (estrellas) url += `puntuacion_min=${estrellas}&`;

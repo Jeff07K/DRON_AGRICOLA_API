@@ -78,7 +78,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://dron-agricola-api-3.onrender.com","https://jeffbejarano.dpdns.org",],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
