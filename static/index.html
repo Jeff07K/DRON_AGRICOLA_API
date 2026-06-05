@@ -63,10 +63,10 @@
       <a class="btn btn-g" href="/api/export-excel">
         <span>⬇</span> EXCEL + STATS
       </a>
-      <a class="btn btn-a" href="/descargar" target="_blank" id="btn-apk-hdr">
+      <button class="btn btn-a" id="btn-apk-hdr">
         <span>📱</span> APK ANDROID
         <span class="dl-badge" id="apk-hdr">0</span>
-      </a>
+      </button>
     </div>
 
   </div>
@@ -164,10 +164,9 @@
           <span class="apk-sub">contador global en BD</span>
         </div>
       </div>
-      <a class="btn btn-a" href="/descargar" target="_blank"
-         id="btn-apk" style="justify-content:center">
+      <button class="btn btn-a" id="btn-apk" style="justify-content:center">
         <span>📲</span> DESCARGAR APK
-      </a>
+      </button>
     </div>
 
     <!-- Info proyecto -->
@@ -450,17 +449,14 @@
     <div class="cc">
       <div class="cc-lbl">Distribución de puntuaciones (★)</div>
       <div class="cc-sub">Cantidad de usuarios por calificación</div>
-      <!-- FIX: contenedor con position:relative y height fija.
-           Sin esto Chart.js recalcula la altura en cada llamada a
-           loadUsuarios() y el canvas crece indefinidamente. -->
-      <div style="position:relative; height:220px; width:100%;">
+      <div style="position:relative;height:220px;width:100%;">
         <canvas id="ch-u-stars"></canvas>
       </div>
     </div>
     <div class="cc">
       <div class="cc-lbl">Descargas por departamento (top 8)</div>
       <div class="cc-sub">Departamentos con más registros de descarga</div>
-      <div style="position:relative; height:220px; width:100%;">
+      <div style="position:relative;height:220px;width:100%;">
         <canvas id="ch-u-deptos"></canvas>
       </div>
     </div>
