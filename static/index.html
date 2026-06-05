@@ -270,25 +270,25 @@
       <div class="cc">
         <div class="cc-lbl">Media de los 3 ejes (g)</div>
         <div class="cc-sub">Línea roja = 1g · referencia gravedad. Accel Z ≈ 1g en reposo plano.</div>
-        <canvas id="ch-a-bar" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-a-bar"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Dispersión Accel X vs Accel Y</div>
         <div class="cc-sub">Cada punto = media de un disparo · r de Pearson y p-value en leyenda</div>
-        <canvas id="ch-a-scatter" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-a-scatter"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Histograma Accel Z — bins reales</div>
         <div class="cc-sub">Verde = zona ≈ 1g saludable · Rango real medido: −0.7 a 1.4 g</div>
-        <canvas id="ch-a-hist" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-a-hist"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Accel Z por disparo — evolución temporal</div>
         <div class="cc-sub">Media de Accel Z en cada disparo · línea roja = referencia 1g</div>
-        <canvas id="ch-a-line" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-a-line"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>
@@ -300,25 +300,25 @@
       <div class="cc">
         <div class="cc-lbl">Media de los 3 ejes (°/s)</div>
         <div class="cc-sub">Barras negativas = rotación opuesta al eje · Hover muestra σ (desv. est.)</div>
-        <canvas id="ch-g-bar" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-g-bar"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Histograma Gyro X — bins reales (−100 a +100°/s)</div>
         <div class="cc-sub">Rojo = pitch negativo · Ámbar = pitch positivo · Bins ajustados al rango real</div>
-        <canvas id="ch-g-hist" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-g-hist"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Varianza por eje giroscópico (°/s)²</div>
         <div class="cc-sub">Mayor varianza = mayor inestabilidad/vibración en ese eje de rotación</div>
-        <canvas id="ch-g-var" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-g-var"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Gyro X, Y, Z — evolución por disparo</div>
         <div class="cc-sub">Media de cada eje giroscópico por número de disparo · todos los disparos</div>
-        <canvas id="ch-g-line" height="230"></canvas>
+        <div style="position:relative;height:230px;width:100%;"><canvas id="ch-g-line"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>
@@ -362,19 +362,19 @@
       <div class="cc">
         <div class="cc-lbl">Coeficiente de variación (%) por eje</div>
         <div class="cc-sub">CV &lt; 30% = estable · 30–100% = moderado · &gt;100% = alta variabilidad</div>
-        <canvas id="ch-s-cv" height="220"></canvas>
+        <div style="position:relative;height:220px;width:100%;"><canvas id="ch-s-cv"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Correlación de Pearson — pares de ejes</div>
         <div class="cc-sub">Verde |r| &gt; 0.5 · Ámbar |r| &gt; 0.3 · Rojo = ejes independientes</div>
-        <canvas id="ch-s-corr" height="220"></canvas>
+        <div style="position:relative;height:220px;width:100%;"><canvas id="ch-s-corr"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">FDP Normal — Accel X ~ N(μ, σ²)</div>
         <div class="cc-sub">Función de densidad de probabilidad modelada · Ajuste gaussiano sobre datos reales</div>
-        <canvas id="ch-s-norm" height="220"></canvas>
+        <div style="position:relative;height:220px;width:100%;"><canvas id="ch-s-norm"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>

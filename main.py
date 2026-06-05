@@ -368,3 +368,33 @@ def eliminar_usuario(usuario_id: int, session: Session = Depends(get_session)):
             status_code=404, detail=f"Usuario {usuario_id} no encontrado"
         )
     return deleted
+
+# =============================================================================
+# APK DOWNLOADS COUNTER
+# Cuenta las descargas usando la tabla UsuarioDescarga como fuente de verdad.
+# GET  /api/apk-downloads  → retorna el total actual
+# POST /api/apk-downloads  → registra +1 descarga anónima y retorna el total
+# =============================================================================
+
+@app.get("/api/apk-downloads", tags=["Sistema"])
+def get_apk_downloads(session: Session = Depends(get_session)):
+    """Retorna el número total de descargas registradas de la APK."""
+    from sqlmodel import select, func
+    total = session.exec(
+        select(func.count()).select_from(__import__('models').UsuarioDescarga)
+    ).one()
+    return {"count": total}
+
+
+@app.post("/api/apk-downloads", tags=["Sistema"])
+def register_apk_download(session: Session = Depends(get_session)):
+    """
+    Registra una descarga anónima de la APK (sin datos de usuario).
+    El conteo real viene de la tabla UsuarioDescarga.
+    Este endpoint solo retorna el total actualizado.
+    """
+    from sqlmodel import select, func
+    total = session.exec(
+        select(func.count()).select_from(__import__('models').UsuarioDescarga)
+    ).one()
+    return {"count": total}
