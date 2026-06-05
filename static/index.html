@@ -63,10 +63,10 @@
       <a class="btn btn-g" href="/api/export-excel">
         <span>⬇</span> EXCEL + STATS
       </a>
-      <button class="btn btn-a" id="btn-apk-hdr">
+      <a class="btn btn-a" href="/descargar" target="_blank" id="btn-apk-hdr">
         <span>📱</span> APK ANDROID
         <span class="dl-badge" id="apk-hdr">0</span>
-      </button>
+      </a>
     </div>
 
   </div>
@@ -164,9 +164,10 @@
           <span class="apk-sub">contador global en BD</span>
         </div>
       </div>
-      <button class="btn btn-a" id="btn-apk" style="justify-content:center">
+      <a class="btn btn-a" href="/descargar" target="_blank"
+         id="btn-apk" style="justify-content:center">
         <span>📲</span> DESCARGAR APK
-      </button>
+      </a>
     </div>
 
     <!-- Info proyecto -->
@@ -237,19 +238,19 @@
         <div class="cc-lbl">Barril — Disparo único</div>
         <div class="cc-sub">Selecciona un disparo · 6 ejes normalizados al máximo global observado</div>
         <div class="r-sel" id="r-sel"></div>
-        <canvas id="ch-r-single" height="260"></canvas>
+        <div style="position:relative;height:260px;width:100%;"><canvas id="ch-r-single"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Barril — Comparar 2 disparos</div>
         <div class="cc-sub">Verde = disparo A · Ámbar = disparo B · usa los selectores del panel izquierdo</div>
-        <canvas id="ch-r-cmp" height="260"></canvas>
+        <div style="position:relative;height:260px;width:100%;"><canvas id="ch-r-cmp"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
       <div class="cc">
         <div class="cc-lbl">Barril — Intensidad media global</div>
         <div class="cc-sub">Promedio absoluto de todos los disparos válidos por eje</div>
-        <canvas id="ch-r-global" height="260"></canvas>
+        <div style="position:relative;height:260px;width:100%;"><canvas id="ch-r-global"></canvas></div>
         <p class="graf-explicacion">Línea roja = 1g (gravedad). Accel Z ≈ 1g en reposo plano.</p>
       </div>
     </div>
@@ -449,16 +450,12 @@
     <div class="cc">
       <div class="cc-lbl">Distribución de puntuaciones (★)</div>
       <div class="cc-sub">Cantidad de usuarios por calificación</div>
-      <div style="position:relative;height:220px;width:100%;">
-        <canvas id="ch-u-stars"></canvas>
-      </div>
+      <div style="position:relative;height:220px;width:100%;"><canvas id="ch-u-stars"></canvas></div>
     </div>
     <div class="cc">
       <div class="cc-lbl">Descargas por departamento (top 8)</div>
       <div class="cc-sub">Departamentos con más registros de descarga</div>
-      <div style="position:relative;height:220px;width:100%;">
-        <canvas id="ch-u-deptos"></canvas>
-      </div>
+      <div style="position:relative;height:220px;width:100%;"><canvas id="ch-u-deptos"></canvas></div>
     </div>
   </div>
 
