@@ -175,22 +175,22 @@ function initTabs() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("on"));
+      btn.classList.add("on");
+      document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("on"));
       const target = document.getElementById('tab-' + activeTab);
-      if (target) target.style.display = '';
+      if (target) target.classList.add("on");
       buildTab(activeTab);
     });
   });
 
   // Mostrar primer tab por defecto
-  document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+  document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("on"));
   const first = document.querySelector('.tab-btn');
   if (first) {
-    first.classList.add('active');
+    first.classList.add('on');
     const firstTab = document.getElementById('tab-' + first.dataset.tab);
-    if (firstTab) firstTab.style.display = '';
+    if (firstTab) firstTab.classList.add('on');
   }
 }
 
@@ -374,7 +374,7 @@ window.selectRadarD = function(dId) {
   const data = AXES.map(ax => mean(byD[dId].map(r => Math.abs(r[ax]))) / globalMax);
 
   document.querySelectorAll('.r-btn').forEach(b =>
-    b.classList.toggle('active', Number(b.dataset.d) === Number(dId))
+    b.classList.toggle('on', Number(b.dataset.d) === Number(dId))
   );
 
   makeChart('ch-r-single', {
