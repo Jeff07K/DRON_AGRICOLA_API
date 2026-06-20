@@ -4,7 +4,7 @@
 
 **Universidad Católica de Colombia · Ingeniería de Sistemas · 2026-1**  
 **Asignatura: Estadística — SOFWARE — Actividad Aplicada C3**  
-**Autor: Jeffrey Alejandro Bejarano Parada — 67001609**
+**Autor: Jeffrey Alejandro Bejarano Parada**
 
 **Sutentacion** (https://youtu.be/RSdz-xWvlUE?si=QJTvHKdEXQ2LjuNL)
 
