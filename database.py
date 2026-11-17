@@ -13,8 +13,7 @@ else:
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://")
     connect_args = {}
 
-engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
-
+engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args, pool_pre_ping=True, pool_recycle=300 )
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
