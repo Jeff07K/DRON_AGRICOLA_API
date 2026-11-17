@@ -1,3 +1,5 @@
+#include <dummy.h>
+
 // ============================================================
 //  Dron Agrícola — ESP32 Firmware v4 CORREGIDO
 //
