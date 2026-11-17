@@ -1,7 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
-from datetime import datetime
-
+from datetime import datetime, timezone
 
 # ─────────────────────────────────────────────
 #  MODELO 1: SensorData (MPU6050)
@@ -18,11 +17,13 @@ class SensorDataBase(SQLModel):
     gyro_z: float = Field(description="Velocidad angular eje Z (rad/s)")
 
 
+
 class SensorData(SensorDataBase, table=True):
     """Modelo de tabla en base de datos"""
     id: Optional[int] = Field(default=None, primary_key=True)
-    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
+    timestamp: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
 class SensorDataCreate(SensorDataBase):
     """Schema para crear registros (body del POST)"""
@@ -81,11 +82,15 @@ class UsuarioDescargaBase(SQLModel):
     )
 
 
+
 class UsuarioDescarga(UsuarioDescargaBase, table=True):
     """Tabla de usuarios que descargaron la APK"""
     id: Optional[int] = Field(default=None, primary_key=True)
-    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    timestamp: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     ip_address: Optional[str] = Field(default=None, max_length=45)
+
 
 
 class UsuarioDescargaCreate(UsuarioDescargaBase):
